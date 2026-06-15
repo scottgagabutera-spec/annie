@@ -244,8 +244,8 @@ export default function Home() {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        position: "sticky",
-        top: 0,
+        position: "fixed",
+        top: 0, left: 0, right: 0,
         zIndex: 100,
       }}>
         <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "24px", fontWeight: 600, color: "var(--permanent-parchment)", letterSpacing: "0.5px" }}>
@@ -296,7 +296,7 @@ export default function Home() {
       </nav>
 
       {/* HERO */}
-      <header style={{ background: "var(--permanent-ink)", padding: "52px 20px 48px", textAlign: "center" }}>
+      <header style={{ background: "var(--permanent-ink)", padding: "108px 20px 48px", textAlign: "center" }}>
         <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "9px", fontWeight: 600, letterSpacing: "3px", textTransform: "uppercase", color: "var(--permanent-gold)", marginBottom: "24px" }}>
           Every experience worth carrying forward
         </p>
