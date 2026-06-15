@@ -1,0 +1,50 @@
+{
+  "nav": {
+    "signin": "Sign in",
+    "cta": "Share an experience"
+  },
+  "hero": {
+    "tagline": "Every experience worth carrying forward",
+    "headline_start": "Some experiences",
+    "headline_emphasis": "change",
+    "headline_end": "the people who live them.",
+    "subheadline": "Individuals, organizations, nations, and history — all speaking. All being heard.",
+    "cta_primary": "Share an experience",
+    "cta_secondary": "Read experiences",
+    "footer_note": "Free to read · Free to share · Annie Plus from $1.50/month"
+  },
+  "categories": {
+    "individual": "Individual",
+    "organization": "Organization",
+    "nation": "Nation",
+    "community": "Community",
+    "historical": "Historical",
+    "live": "Live"
+  },
+  "feed": {
+    "featured_label": "Featured experience"
+  },
+  "story": {
+    "carried_forward": "carried this forward",
+    "responses": "responses",
+    "read_time": "min read",
+    "read_cta": "Read",
+    "anonymous": "Shared anonymously"
+  },
+  "modal": {
+    "title": "Share an experience",
+    "subtitle": "Who is sharing? No credentials required.",
+    "continue": "Continue",
+    "types": {
+      "individual": "An individual",
+      "organization": "An organization",
+      "nation": "A nation",
+      "community": "A community",
+      "live": "Go live",
+      "historical": "A historical account"
+    }
+  },
+  "theme": {
+    "toggle_label": "Toggle theme"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "nav": {
+    "signin": "Se connecter",
+    "cta": "Partager une expérience"
+  },
+  "hero": {
+    "tagline": "Chaque expérience qui mérite d'être transmise",
+    "headline_start": "Certaines expériences",
+    "headline_emphasis": "changent",
+    "headline_end": "ceux qui les vivent.",
+    "subheadline": "Individus, organisations, nations et histoire — tous parlent. Tous sont entendus.",
+    "cta_primary": "Partager une expérience",
+    "cta_secondary": "Lire des expériences",
+    "footer_note": "Gratuit à lire · Gratuit à partager · Annie Plus à partir de 1,50 $/mois"
+  },
+  "categories": {
+    "individual": "Individu",
+    "organization": "Organisation",
+    "nation": "Nation",
+    "community": "Communauté",
+    "historical": "Historique",
+    "live": "En direct"
+  },
+  "feed": {
+    "featured_label": "Expérience à la une"
+  },
+  "story": {
+    "carried_forward": "ont transmis ceci",
+    "responses": "réponses",
+    "read_time": "min de lecture",
+    "read_cta": "Lire",
+    "anonymous": "Partagé anonymement"
+  },
+  "modal": {
+    "title": "Partager une expérience",
+    "subtitle": "Qui partage ? Aucune accréditation requise.",
+    "continue": "Continuer",
+    "types": {
+      "individual": "Un individu",
+      "organization": "Une organisation",
+      "nation": "Une nation",
+      "community": "Une communauté",
+      "live": "Aller en direct",
+      "historical": "Un témoignage historique"
+    }
+  },
+  "theme": {
+    "toggle_label": "Changer le thème"
+  }
+}
