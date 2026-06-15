@@ -1,26 +1,70 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ink:        #0F0E0C;
+  --ink-soft:   #2C2820;
+  --parchment:  #F6F1EA;
+  --surface:    #FFFFFF;
+  --warm-mid:   #EDE7DC;
+  --text:       #1A1714;
+  --text-soft:  #5C5047;
+  --text-muted: #9A8E83;
+  --gold:       #B8923A;
+  --gold-soft:  #F2E8D6;
+  --gold-pale:  #FAF4EB;
+  --sage:       #3D5C38;
+  --sage-soft:  #E4EEE2;
+  --border:     #E2D9CE;
+  --border-dark:#C8BBB0;
+  --live:       #C13A3A;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+[data-theme="dark"] {
+  --parchment:  #0F0E0C;
+  --surface:    #1A1714;
+  --warm-mid:   #2C2820;
+  --text:       #F6F1EA;
+  --text-soft:  #C8BBB0;
+  --text-muted: #9A8E83;
+  --border:     #2C2820;
+  --border-dark:#3D3530;
+  --gold-soft:  #2C2318;
+  --gold-pale:  #1F1A12;
+  --sage-soft:  #1A2419;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--parchment);
+  color: var(--text);
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 17px;
+  line-height: 1.72;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* ─── ANNIE PERMANENT RULE ───────────────────────────────────────────
+   The nav and hero are ALWAYS dark ink — #0F0E0C.
+   They never inherit the theme. They never change.
+   This applies to every page, every screen, forever.
+   Do not override this anywhere in the codebase.
+─────────────────────────────────────────────────────────────────── */
+.annie-nav,
+.annie-hero {
+  background: #0F0E0C !important;
+}
+
+/* Nav text always parchment */
+.annie-nav * {
+  color: rgba(246,241,234,0.55);
 }
