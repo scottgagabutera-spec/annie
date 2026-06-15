@@ -1,8 +1,9 @@
 "use client";
 // components/ShareModal.tsx
-// "Share an experience" bottom sheet modal.
+// Selects category then navigates to /share?type=key
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { SHARE_TYPES } from "../lib/categories";
 
 type Props = {
@@ -12,8 +13,15 @@ type Props = {
 
 export default function ShareModal({ open, onClose }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
+  const router = useRouter();
 
   if (!open) return null;
+
+  const handleContinue = () => {
+    if (!selected) return;
+    onClose();
+    router.push(`/share?type=${selected}`);
+  };
 
   return (
     <div
@@ -29,7 +37,6 @@ export default function ShareModal({ open, onClose }: Props) {
         overflowY:  "auto",
         overscrollBehavior: "contain",
       }}>
-      {/* Drag handle */}
       <div style={{ width: "36px", height: "4px", background: "var(--border-default)", borderRadius: "2px", margin: "0 auto 20px" }} />
 
       <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "22px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "6px" }}>
@@ -62,19 +69,20 @@ export default function ShareModal({ open, onClose }: Props) {
       </div>
 
       <button
+        onClick={handleContinue}
         disabled={!selected}
         style={{
-          width:       "100%",
-          background:  selected ? "var(--permanent-gold)" : "rgba(255,255,255,0.08)",
-          color:       selected ? "white" : "rgba(246,241,234,0.3)",
-          border:      "none",
-          padding:     "15px",
+          width:        "100%",
+          background:   selected ? "var(--permanent-gold)" : "rgba(255,255,255,0.08)",
+          color:        selected ? "white" : "rgba(246,241,234,0.3)",
+          border:       "none",
+          padding:      "15px",
           borderRadius: "var(--radius-md)",
-          fontFamily:  "'Inter', sans-serif",
-          fontSize:    "14px",
-          fontWeight:  600,
-          cursor:      selected ? "pointer" : "not-allowed",
-          transition:  "all 0.2s",
+          fontFamily:   "'Inter', sans-serif",
+          fontSize:     "14px",
+          fontWeight:   600,
+          cursor:       selected ? "pointer" : "not-allowed",
+          transition:   "all 0.2s",
         }}>
         Continue
       </button>
