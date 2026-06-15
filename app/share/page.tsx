@@ -5,7 +5,7 @@
 // Step 2: Three verification questions, one at a time
 // Step 3: Writing editor with optional AI assist
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { assistWriting, AssistMode } from "../../lib/ai";
 import { SHARE_TYPES } from "../../lib/categories";
@@ -107,7 +107,7 @@ function QuestionScreen({
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function SharePage() {
+function SharePageInner() {
   const params   = useSearchParams();
   const router   = useRouter();
   const initialWho = params.get("type") || "";
@@ -415,5 +415,13 @@ export default function SharePage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function SharePage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100dvh", background: "var(--permanent-ink)" }} />}>
+      <SharePageInner />
+    </Suspense>
   );
 }
