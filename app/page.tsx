@@ -9,8 +9,34 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState("individual");
+  const [user, setUser] = useState<{ name: string; email: string; avatar: string } | null>(null);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+    const initAuth = async () => {
+      const { supabase } = await import("../lib/supabase");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser({
+          name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "You",
+          email: session.user.email || "",
+          avatar: session.user.user_metadata?.avatar_url || "",
+        });
+      }
+      supabase.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          setUser({
+            name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "You",
+            email: session.user.email || "",
+            avatar: session.user.user_metadata?.avatar_url || "",
+          });
+        } else {
+          setUser(null);
+        }
+      });
+    };
+    initAuth();
+  }, []);
 
   const categories = [
     { key: "individual",   label: t("categories.individual") },
@@ -30,9 +56,27 @@ export default function Home() {
     { key: "historical",   label: t("modal.types.historical") },
   ];
 
+  const handleSignIn = async () => {
+    const { supabase } = await import("../lib/supabase");
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+  };
+
+  const handleSignOut = async () => {
+    const { supabase } = await import("../lib/supabase");
+    await supabase.auth.signOut();
+    setUser(null);
+  };
+
+  const initials = user?.name
+    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "";
+
   return (
     <>
-      {/* NAV — permanent ink, never changes with theme */}
+      {/* NAV */}
       <nav style={{
         background:     "var(--permanent-ink)",
         padding:        "0 24px",
@@ -58,17 +102,17 @@ export default function Home() {
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             style={{
-              background:      "rgba(255,255,255,0.08)",
-              border:          "1px solid rgba(255,255,255,0.12)",
-              borderRadius:    "var(--radius-sm)",
-              color:           "var(--permanent-parchment)",
-              width:           "34px",
-              height:          "34px",
-              cursor:          "pointer",
-              display:         "flex",
-              alignItems:      "center",
-              justifyContent:  "center",
-              flexShrink:      0,
+              background:     "rgba(255,255,255,0.08)",
+              border:         "1px solid rgba(255,255,255,0.12)",
+              borderRadius:   "var(--radius-sm)",
+              color:          "var(--permanent-parchment)",
+              width:          "34px",
+              height:         "34px",
+              cursor:         "pointer",
+              display:        "flex",
+              alignItems:     "center",
+              justifyContent: "center",
+              flexShrink:     0,
             }}
             aria-label={t("theme.toggle_label")}
           >
@@ -91,61 +135,113 @@ export default function Home() {
             )}
           </button>
 
-          <span style={{
-            fontFamily: "'Inter', sans-serif",
-            fontSize:   "12px",
-            fontWeight: 500,
-            color:      "rgba(246,241,234,0.55)",
-            cursor:     "pointer",
-          }}>
-            {t("nav.signin")}
-          </span>
+          {user ? (
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  style={{ width: "30px", height: "30px", borderRadius: "50%", objectFit: "cover" }}
+                />
+              ) : (
+                <div style={{
+                  width:          "30px",
+                  height:         "30px",
+                  borderRadius:   "50%",
+                  background:     "var(--permanent-gold)",
+                  display:        "flex",
+                  alignItems:     "center",
+                  justifyContent: "center",
+                  fontFamily:     "'Inter', sans-serif",
+                  fontSize:       "11px",
+                  fontWeight:     600,
+                  color:          "white",
+                }}>
+                  {initials}
+                </div>
+              )}
+              <span style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize:   "12px",
+                fontWeight: 500,
+                color:      "rgba(246,241,234,0.75)",
+              }}>
+                {user.name.split(" ")[0]}
+              </span>
+              <span
+                onClick={handleSignOut}
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize:   "11px",
+                  color:      "rgba(246,241,234,0.35)",
+                  cursor:     "pointer",
+                }}
+              >
+                Sign out
+              </span>
+            </div>
+          ) : (
+            <span
+              onClick={handleSignIn}
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize:   "12px",
+                fontWeight: 500,
+                color:      "rgba(246,241,234,0.55)",
+                cursor:     "pointer",
+              }}
+            >
+              {t("nav.signin")}
+            </span>
+          )}
 
-          <button style={{
-            fontFamily:   "'Inter', sans-serif",
-            fontSize:     "12px",
-            fontWeight:   600,
-            background:   "var(--permanent-gold)",
-            color:        "white",
-            border:       "none",
-            padding:      "8px 18px",
-            borderRadius: "var(--radius-sm)",
-            cursor:       "pointer",
-          }}>
+          <button
+            onClick={() => setModalOpen(true)}
+            style={{
+              fontFamily:   "'Inter', sans-serif",
+              fontSize:     "12px",
+              fontWeight:   600,
+              background:   "var(--permanent-gold)",
+              color:        "white",
+              border:       "none",
+              padding:      "8px 18px",
+              borderRadius: "var(--radius-sm)",
+              cursor:       "pointer",
+            }}>
             {t("nav.cta")}
           </button>
         </div>
       </nav>
 
-      {/* HERO — permanent ink, never changes with theme */}
+      {/* HERO */}
       <header style={{
-        background:  "var(--permanent-ink)",
-        padding:     "72px 24px 64px",
-        textAlign:   "center",
+        background: "var(--permanent-ink)",
+        padding:    "72px 24px 64px",
+        textAlign:  "center",
       }}>
         <p style={{
-          fontFamily:      "'Inter', sans-serif",
-          fontSize:        "10px",
-          fontWeight:      600,
-          letterSpacing:   "3px",
-          textTransform:   "uppercase",
-          color:           "var(--permanent-gold)",
-          marginBottom:    "28px",
+          fontFamily:    "'Inter', sans-serif",
+          fontSize:      "10px",
+          fontWeight:    600,
+          letterSpacing: "3px",
+          textTransform: "uppercase",
+          color:         "var(--permanent-gold)",
+          marginBottom:  "28px",
         }}>
           {t("hero.tagline")}
         </p>
 
         <h1 style={{
-          fontFamily:   "'Cormorant Garamond', serif",
-          fontSize:     "clamp(40px, 7vw, 72px)",
-          fontWeight:   300,
-          lineHeight:   1.1,
-          color:        "var(--permanent-parchment)",
-          marginBottom: "24px",
-          letterSpacing:"-1px",
-          maxWidth:     "820px",
-          marginLeft:   "auto",
-          marginRight:  "auto",
+          fontFamily:    "'Cormorant Garamond', serif",
+          fontSize:      "clamp(40px, 7vw, 72px)",
+          fontWeight:    300,
+          lineHeight:    1.1,
+          color:         "var(--permanent-parchment)",
+          marginBottom:  "24px",
+          letterSpacing: "-1px",
+          maxWidth:      "820px",
+          marginLeft:    "auto",
+          marginRight:   "auto",
         }}>
           {t("hero.headline_start")}{" "}
           <em style={{ color: "var(--permanent-gold)", fontStyle: "italic" }}>
@@ -167,36 +263,36 @@ export default function Home() {
 
         {/* CATEGORY SELECTOR */}
         <div style={{
-          display:         "inline-flex",
-          background:      "rgba(255,255,255,0.06)",
-          border:          "1px solid rgba(255,255,255,0.1)",
-          borderRadius:    "var(--radius-md)",
-          padding:         "4px",
-          marginBottom:    "40px",
-          gap:             "2px",
-          flexWrap:        "wrap",
-          justifyContent:  "center",
+          display:        "inline-flex",
+          background:     "rgba(255,255,255,0.06)",
+          border:         "1px solid rgba(255,255,255,0.1)",
+          borderRadius:   "var(--radius-md)",
+          padding:        "4px",
+          marginBottom:   "40px",
+          gap:            "2px",
+          flexWrap:       "wrap",
+          justifyContent: "center",
         }}>
           {categories.map((cat) => (
             <button
               key={cat.key}
               onClick={() => setActiveCategory(cat.key)}
               style={{
-                fontFamily:  "'Inter', sans-serif",
-                fontSize:    "12px",
-                fontWeight:  activeCategory === cat.key ? 600 : 500,
-                padding:     "9px 16px",
-                borderRadius:"var(--radius-sm)",
-                cursor:      "pointer",
-                color:       activeCategory === cat.key ? "white" : "rgba(246,241,234,0.55)",
-                border:      "none",
-                background:  activeCategory === cat.key
+                fontFamily:   "'Inter', sans-serif",
+                fontSize:     "12px",
+                fontWeight:   activeCategory === cat.key ? 600 : 500,
+                padding:      "9px 16px",
+                borderRadius: "var(--radius-sm)",
+                cursor:       "pointer",
+                color:        activeCategory === cat.key ? "white" : "rgba(246,241,234,0.55)",
+                border:       "none",
+                background:   activeCategory === cat.key
                   ? (cat.key === "live" ? "var(--permanent-live)" : "var(--permanent-gold)")
                   : "transparent",
-                display:     "flex",
-                alignItems:  "center",
-                gap:         "6px",
-                transition:  "all 0.2s",
+                display:      "flex",
+                alignItems:   "center",
+                gap:          "6px",
+                transition:   "all 0.2s",
               }}>
               {cat.key === "live" && (
                 <span style={{
@@ -280,7 +376,6 @@ export default function Home() {
           overflow:     "hidden",
           cursor:       "pointer",
         }}>
-          {/* Pull quote — permanent ink */}
           <div style={{
             background: "var(--permanent-ink)",
             padding:    "36px 40px 32px",
@@ -321,7 +416,6 @@ export default function Home() {
             }}>Individual · Migration</p>
           </div>
 
-          {/* Story body — theme responsive */}
           <div style={{ padding: "28px 36px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
               <div style={{
@@ -365,7 +459,6 @@ export default function Home() {
               The road from the airport looked the same. The trees I remembered were taller. The checkpoint was gone. I had rehearsed this moment for years and none of it prepared me for how ordinary it all felt — and how that ordinariness was the most extraordinary thing of all.
             </p>
 
-            {/* STATS ROW */}
             <div style={{
               display:        "flex",
               alignItems:     "center",
@@ -374,21 +467,18 @@ export default function Home() {
               borderTop:      "1px solid var(--border-default)",
             }}>
               <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", alignItems: "center" }}>
-
                 <span style={{ display: "flex", alignItems: "center", gap: "5px", fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--text-muted)", cursor: "pointer" }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                   </svg>
                   4.2k {t("story.carried_forward")}
                 </span>
-
                 <span style={{ display: "flex", alignItems: "center", gap: "5px", fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--text-muted)", cursor: "pointer" }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                   </svg>
                   312 {t("story.responses")}
                 </span>
-
                 <span style={{ display: "flex", alignItems: "center", gap: "5px", fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--text-muted)", cursor: "pointer" }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10"/>
@@ -396,9 +486,7 @@ export default function Home() {
                   </svg>
                   8 {t("story.read_time")}
                 </span>
-
               </div>
-
               <span style={{
                 display:    "flex",
                 alignItems: "center",
