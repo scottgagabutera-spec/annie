@@ -15,7 +15,6 @@ export type CategoryQuestions = {
   skipQ1?: boolean;
 };
 
-// Category groups
 const PERSON_TYPES    = ["individual", "family"];
 const ORG_TYPES       = ["company", "nonprofit", "institution", "government", "nation", "movement", "faith", "community"];
 const HISTORICAL_TYPE = ["historical"];
@@ -23,62 +22,62 @@ const LIVE_TYPE       = ["live"];
 
 export function getQuestions(whoKey: string): CategoryQuestions {
 
-  // ── LIVE — skip Q1, only Q2 + Q3 ──────────────────────────────────────────
+  // LIVE
   if (LIVE_TYPE.includes(whoKey)) {
     return {
       skipQ1: true,
-      q1: { question: "", sub: "", options: [] }, // unused
+      q1: { question: "", sub: "", options: [] },
       q2: {
-        question: "Is what you are sharing accurate as it unfolds?",
-        sub: "Live experiences can change quickly. Be honest about what you know right now.",
+        question: "Is what you are sharing accurate right now?",
+        sub: "Things can change fast when something is still happening. Just be honest about what you know at this moment.",
         options: [
-          { key: "confirmed",  label: "Yes, this is accurate as I know it", note: "You are reporting what you are witnessing." },
-          { key: "unverified", label: "Some details are still unclear",      note: "Annie will mark this as developing. Still worth sharing." },
+          { key: "confirmed",  label: "Yes, this is accurate as far as I know", note: "You are sharing what you are seeing or hearing." },
+          { key: "unverified", label: "Some details are still unclear",          note: "Annie will show this as still developing. It is still worth sharing." },
         ],
       },
       q3: {
         question: "How do you want to appear?",
-        sub: "You can change this after the experience concludes.",
+        sub: "You can update this after the experience is over.",
         options: [
-          { key: "name",      label: "My real name",    note: "Your name as on your profile." },
-          { key: "chosen",    label: "A name I choose", note: "You will enter it on the next screen." },
-          { key: "anonymous", label: "Anonymously",     note: "No name shown. Annie protects your identity." },
+          { key: "name",      label: "My real name",    note: "Your name as it appears on your profile." },
+          { key: "chosen",    label: "A name I choose", note: "You will type it in on the next screen." },
+          { key: "anonymous", label: "Anonymously",     note: "No name will show. Annie keeps your identity private." },
         ],
       },
     };
   }
 
-  // ── HISTORICAL ─────────────────────────────────────────────────────────────
+  // HISTORICAL
   if (HISTORICAL_TYPE.includes(whoKey)) {
     return {
       q1: {
-        question: "Are you the original source of this account?",
-        sub: "Historical experiences can come from those who lived them or those who preserved them. Both matter.",
+        question: "Did you or your community live through this?",
+        sub: "Some historical accounts come from people who were there. Others are preserved by someone who came after. Both have a place here.",
         options: [
-          { key: "yes",      label: "I am the original source",     note: "You or your community lived this." },
-          { key: "carrying", label: "I am preserving someone else's account", note: "You are the carrier, not the origin." },
+          { key: "yes",      label: "Yes, I or my community lived this",      note: "This is a firsthand account." },
+          { key: "carrying", label: "I am preserving someone else's account", note: "You are the one keeping it alive, not the one who was there." },
         ],
       },
       q2: {
-        question: "Can you cite a source for this account?",
-        sub: "A source helps Annie present historical experiences with appropriate context.",
+        question: "Do you have a source you can point to?",
+        sub: "A source helps Annie give historical experiences the right context. If you do not have one, that is okay too.",
         options: [
-          { key: "confirmed",  label: "Yes, I have a source I can cite",  note: "You will be able to add it in the editor." },
-          { key: "unverified", label: "No source available",              note: "Annie will note this account is uncited." },
+          { key: "confirmed",  label: "Yes, I can cite a source", note: "You will have space to add it in the editor." },
+          { key: "unverified", label: "No source available",      note: "Annie will note that this account is uncited." },
         ],
       },
       q3: {
-        question: "How do you want to appear as the carrier?",
-        sub: "The focus is on the experience, not the person sharing it.",
+        question: "How do you want to appear as the person sharing this?",
+        sub: "The experience is the focus. How much you want to be seen alongside it is up to you.",
         options: [
-          { key: "name",      label: "My name as the carrier",  note: "Your name appears alongside the experience." },
-          { key: "anonymous", label: "Anonymous carrier",       note: "No name shown. The experience speaks for itself." },
+          { key: "name",      label: "My name, as the one carrying this forward", note: "Your name appears alongside the experience." },
+          { key: "anonymous", label: "No name",                                    note: "The experience stands on its own." },
         ],
       },
     };
   }
 
-  // ── ORGANIZATIONS (company, nonprofit, institution, government, nation, movement, faith, community) ──
+  // ORGANIZATIONS
   if (ORG_TYPES.includes(whoKey)) {
     const orgLabel = {
       company:     "your company",
@@ -93,61 +92,63 @@ export function getQuestions(whoKey: string): CategoryQuestions {
 
     return {
       q1: {
-        question: `Did ${orgLabel} live through this directly?`,
-        sub: "Organizations can share experiences they went through or accounts they are carrying forward on behalf of others.",
+        question: `Did ${orgLabel} go through this?`,
+        sub: "Organizations can share something they experienced directly, or something they are keeping alive on behalf of others.",
         options: [
-          { key: "yes",      label: `Yes, ${orgLabel} was directly involved`, note: "This happened to or within your organization." },
-          { key: "carrying", label: "We are carrying this forward for others",  note: "Your organization is preserving or sharing on behalf of others." },
+          { key: "yes",      label: `Yes, ${orgLabel} was part of this`, note: "This happened to or within your organization." },
+          { key: "carrying", label: "We are sharing this on behalf of others", note: "Your organization is preserving or passing on an account from others." },
         ],
       },
       q2: {
-        question: "Does this reflect your official account?",
-        sub: "Annie presents organizational experiences with appropriate context about their source.",
+        question: "Does this reflect your organization's position?",
+        sub: "Annie gives context about where an account comes from. It helps people understand what they are reading.",
         options: [
-          { key: "confirmed",  label: "Yes, this is our official account",    note: "Your organization stands behind this statement." },
-          { key: "unverified", label: "This is not an official position",     note: "Annie will note this is not an official statement." },
+          { key: "confirmed",  label: "Yes, this is our official account",  note: "Your organization stands behind what is written here." },
+          { key: "unverified", label: "This is not an official position",   note: "Annie will note that this does not represent an official statement." },
         ],
       },
       q3: {
-        question: "How do you want to appear?",
-        sub: "Organizations are identified by name. Anonymous posting is not available for organizational accounts.",
+        question: "What name should appear with this?",
+        sub: "Organizations appear by name here. Anonymous publishing is not available for organizational accounts.",
         options: [
-          { key: "name",   label: "Our official name",   note: "Your organization's verified name." },
-          { key: "chosen", label: "A name we choose",    note: "A specific department, chapter, or representative name." },
+          { key: "name",   label: "Our official name",   note: "The verified name of your organization." },
+          { key: "chosen", label: "A specific name",     note: "A department, chapter, or representative name." },
         ],
       },
     };
   }
 
-  // ── PERSON / FAMILY (default) ──────────────────────────────────────────────
+  // PERSON / FAMILY
   return {
     q1: {
       question: whoKey === "family"
-        ? "Did your family live through this together?"
-        : "Did you witness or live this experience?",
-      sub: "Annie carries both personal accounts and experiences shared on behalf of others.",
+        ? "Did your family go through this together?"
+        : "Were you there when this happened?",
+      sub: "Annie welcomes both personal accounts and experiences shared on behalf of someone else.",
       options: [
-        { key: "yes",      label: whoKey === "family" ? "Yes, our family lived this" : "Yes, I was there",
-          note: whoKey === "family" ? "This is your family's shared experience." : "You personally lived or witnessed this." },
-        { key: "carrying", label: "I am carrying it forward",
-          note: "This happened to someone else and you are preserving it." },
+        { key: "yes",
+          label: whoKey === "family" ? "Yes, our family went through this" : "Yes, I was there",
+          note:  whoKey === "family" ? "This is your family's shared experience." : "You were there or you saw it yourself." },
+        { key: "carrying",
+          label: "I am sharing it on behalf of someone else",
+          note:  "This happened to someone else and you are making sure it is not forgotten." },
       ],
     },
     q2: {
-      question: "Is this true to the best of your knowledge?",
-      sub: "Annie does not require proof. But we ask you to be honest about what you know.",
+      question: "Is this true as far as you know?",
+      sub: "Annie does not ask for proof. We just ask you to be honest about what you know and what you are not sure of.",
       options: [
-        { key: "confirmed",  label: "Yes, I confirm this is true",  note: "You stand behind this account." },
-        { key: "unverified", label: "I cannot fully verify this",   note: "Annie will mark it as unverified. Still worth sharing." },
+        { key: "confirmed",  label: "Yes, I stand behind this",   note: "You are confident in what you have written." },
+        { key: "unverified", label: "I cannot fully verify this", note: "Annie will note that. It is still worth sharing." },
       ],
     },
     q3: {
       question: "How do you want to appear?",
-      sub: "You can always change this later.",
+      sub: "You can change this any time after you publish.",
       options: [
-        { key: "name",      label: "My real name",    note: "Your full name as on your profile." },
-        { key: "chosen",    label: "A name I choose", note: "You will enter it on the next screen." },
-        { key: "anonymous", label: "Anonymously",     note: "No name shown. Annie protects your identity." },
+        { key: "name",      label: "My real name",    note: "Your full name as it appears on your profile." },
+        { key: "chosen",    label: "A name I choose", note: "You will type it in on the next screen." },
+        { key: "anonymous", label: "Anonymously",     note: "No name will show. Annie keeps your identity private." },
       ],
     },
   };

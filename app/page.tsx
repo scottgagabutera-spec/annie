@@ -87,17 +87,11 @@ export default function Home() {
       {/* HERO */}
       <header style={{ background: "var(--permanent-ink)", padding: "108px 20px 48px", textAlign: "center" }}>
         <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "9px", fontWeight: 600, letterSpacing: "3px", textTransform: "uppercase", color: "var(--permanent-gold)", marginBottom: "24px" }}>
-          Every experience worth carrying forward
+          A place for real experiences
         </p>
 
-        <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(36px, 7vw, 72px)", fontWeight: 300, lineHeight: 1.1, color: "var(--permanent-parchment)", marginBottom: "20px", letterSpacing: "-0.5px", maxWidth: "820px", marginLeft: "auto", marginRight: "auto" }}>
-          Some experiences{" "}
-          <em style={{ color: "var(--permanent-gold)", fontStyle: "italic" }}>change</em>{" "}
-          the people who live them.
-        </h1>
-
         <p style={{ fontSize: "15px", color: "rgba(246,241,234,0.52)", maxWidth: "480px", margin: "0 auto 36px", fontWeight: 300, lineHeight: 1.65 }}>
-          People, companies, nations, communities, and history. All speaking. All being heard.
+          People, companies, nations, communities, and movements. Each one with something that happened and something worth saying about it.
         </p>
 
         {/* Category selector */}
@@ -147,7 +141,7 @@ export default function Home() {
         </div>
 
         <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "rgba(246,241,234,0.28)", marginTop: "16px" }}>
-          Free to read. Free to share. Annie Plus from $1.50/month.
+          Reading and sharing are free. Annie Plus starts at $1.50 a month.
         </p>
       </header>
 
