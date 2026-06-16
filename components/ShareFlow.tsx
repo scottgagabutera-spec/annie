@@ -576,7 +576,6 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
             </div>
           </div>
         )}
-        )}
       </div>
 
       <style>{`
