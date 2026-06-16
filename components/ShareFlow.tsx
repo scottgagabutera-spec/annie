@@ -1,8 +1,6 @@
 "use client";
-// components/ShareFlow/index.tsx
+// components/ShareFlow.tsx
 // Full-screen overlay share flow — no page navigation, no flash.
-// Opens instantly over the homepage. URL updates silently for shareability.
-// Closes by pressing Escape or the X button, returns to homepage state.
 
 import { useEffect, useRef, useState } from "react";
 import { assistWriting, AssistMode } from "../lib/ai";
@@ -23,23 +21,20 @@ type Answers = {
 };
 
 type Draft = {
-  answers: Answers;
-  title:   string;
-  body:    string;
+  answers:   Answers;
+  title:     string;
+  body:      string;
   pullQuote: string;
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function wordCount(t: string) {
   return t.trim().split(/\s+/).filter(Boolean).length;
 }
 
-const FREE_DAILY_ASSIST  = 3;
-const FREE_IMAGES_MAX    = 2;
-const PLUS_IMAGES_MAX    = 10;
-const FREE_WORDS_SOFT    = 99999; // no word limit — see product decision
-const DRAFT_KEY          = "annie_draft";
+const FREE_DAILY_ASSIST = 3;
+const DRAFT_KEY         = "annie_draft";
 
 function saveDraftLocally(draft: Draft) {
   try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch {}
@@ -154,10 +149,10 @@ function SignInGate({ onSignIn, onBack }: { onSignIn: () => void; onBack: () => 
 // ─── Main ShareFlow ───────────────────────────────────────────────────────────
 
 type Props = {
-  open:      boolean;
-  user:      AnnieUser | null;
-  onClose:   () => void;
-  onSignIn:  () => void;
+  open:         boolean;
+  user:         AnnieUser | null;
+  onClose:      () => void;
+  onSignIn:     () => void;
   initialType?: string;
 };
 
@@ -169,13 +164,13 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
   const [title, setTitle]         = useState("");
   const [body, setBody]           = useState("");
   const [pullQuote, setPullQuote] = useState("");
-  const [assistOpen, setAssistOpen]       = useState(false);
-  const [assistLoading, setAssistLoading] = useState(false);
-  const [assistMode, setAssistMode]       = useState<AssistMode>("improve");
-  const [assistResult, setAssistResult]   = useState("");
+  const [assistOpen, setAssistOpen]           = useState(false);
+  const [assistLoading, setAssistLoading]     = useState(false);
+  const [assistMode, setAssistMode]           = useState<AssistMode>("improve");
+  const [assistResult, setAssistResult]       = useState("");
   const [assistUsedToday, setAssistUsedToday] = useState(0);
-  const [publishing, setPublishing] = useState(false);
-  const [editorDark, setEditorDark] = useState(false);
+  const [publishing, setPublishing]           = useState(false);
+  const [editorDark, setEditorDark]           = useState(false);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   // Load local draft on open
@@ -187,9 +182,7 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
       setTitle(draft.title);
       setBody(draft.body);
       setPullQuote(draft.pullQuote);
-      if (draft.answers.whoKey) {
-        setStep("write");
-      }
+      if (draft.answers.whoKey) setStep("write");
     }
   }, [open]);
 
@@ -221,9 +214,9 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
 
   // Lock body scroll
   useEffect(() => {
-    document.documentElement.style.overflow  = open ? "hidden" : "";
-    document.documentElement.style.position  = open ? "fixed"  : "";
-    document.documentElement.style.width     = open ? "100%"   : "";
+    document.documentElement.style.overflow = open ? "hidden" : "";
+    document.documentElement.style.position = open ? "fixed"  : "";
+    document.documentElement.style.width    = open ? "100%"   : "";
     return () => {
       document.documentElement.style.overflow = "";
       document.documentElement.style.position = "";
@@ -231,7 +224,7 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
     };
   }, [open]);
 
-  // Auto-resize textarea
+  // Auto-resize body textarea
   useEffect(() => {
     const ta = bodyRef.current;
     if (!ta) return;
@@ -278,57 +271,64 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
     // TODO: save to Supabase in next sprint
   };
 
-  const canPublish    = title.trim().length > 0 && wordCount(body) >= 50;
-  const assistsLeft   = Math.max(0, FREE_DAILY_ASSIST - assistUsedToday);
-  const isPlus        = false; // TODO: read from user profile
-  const whoLabel      = SHARE_TYPES.find((t) => t.key === answers.whoKey)?.label || "";
+  const canPublish  = title.trim().length > 0 && wordCount(body) >= 50;
+  const assistsLeft = Math.max(0, FREE_DAILY_ASSIST - assistUsedToday);
+  const isPlus      = false; // TODO: read from user profile
+  const whoLabel    = SHARE_TYPES.find((t) => t.key === answers.whoKey)?.label || "";
 
-  // Editor theme tokens — light by default, dark on toggle
+  // ─── Editor theme tokens ───────────────────────────────────────────────────
+  // CONTRAST RULE: every value here must be legible on its background.
+  // Dark mode: minimum 0.5 opacity for secondary text, 0.35 for placeholders
+  // (placeholders are intentionally dimmer than real content — but still readable).
+  // Light mode: dark ink on warm white, placeholders at 0.28 (enough to see, not compete).
   const ed = {
-    bg:           editorDark ? "#0f0e0c"                : "#faf9f7",
-    border:       editorDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)",
-    titleColor:   editorDark ? "#f6f1ea"                : "#1a1814",
-    bodyColor:    editorDark ? "rgba(246,241,234,0.85)" : "#2c2820",
-    metaColor:    editorDark ? "rgba(246,241,234,0.3)"  : "rgba(44,40,32,0.4)",
-    mutedBorder:  editorDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.07)",
-    assistBg:     editorDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
-    assistBorder: editorDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
-    assistText:   editorDark ? "rgba(246,241,234,0.45)" : "rgba(44,40,32,0.5)",
-    chipBorder:   editorDark ? "rgba(255,255,255,0.1)"  : "rgba(0,0,0,0.1)",
-    chipColor:    editorDark ? "rgba(246,241,234,0.4)"  : "rgba(44,40,32,0.45)",
-    resultBg:     editorDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
-    resultBorder: editorDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)",
-    resultText:   editorDark ? "rgba(246,241,234,0.8)"  : "#2c2820",
-    keepBtn:      editorDark ? "rgba(246,241,234,0.5)"  : "rgba(44,40,32,0.4)",
-    keepBorder:   editorDark ? "rgba(255,255,255,0.1)"  : "rgba(0,0,0,0.1)",
-    pullBg:       editorDark ? "rgba(255,255,255,0.03)" : "rgba(191,155,78,0.04)",
-    pullBorder:   editorDark ? "rgba(255,255,255,0.07)" : "rgba(191,155,78,0.2)",
-    pullText:     editorDark ? "rgba(246,241,234,0.7)"  : "#2c2820",
-    barBg:        editorDark ? "#0f0e0c"                : "#faf9f7",
-    barBorder:    editorDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
-    saveColor:    editorDark ? "rgba(246,241,234,0.4)"  : "rgba(44,40,32,0.4)",
-    saveBorder:   editorDark ? "rgba(255,255,255,0.1)"  : "rgba(0,0,0,0.12)",
-    iconStroke:   editorDark ? "rgba(246,241,234,0.4)"  : "rgba(44,40,32,0.35)",
-    tagBg:        editorDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
-    tagBorder:    editorDark ? "rgba(255,255,255,0.1)"  : "rgba(0,0,0,0.1)",
-    tagText:      editorDark ? "rgba(246,241,234,0.4)"  : "rgba(44,40,32,0.45)",
-    wordOk:       editorDark ? "rgba(246,241,234,0.25)" : "rgba(44,40,32,0.3)",
-    wordWarn:     "rgba(191,155,78,0.7)",
-    toggleStroke: editorDark ? "rgba(246,241,234,0.5)"  : "rgba(44,40,32,0.4)",
+    bg:               editorDark ? "#141210"                : "#faf9f7",
+    titleColor:       editorDark ? "#f6f1ea"                : "#1a1814",
+    bodyColor:        editorDark ? "#e8e2d9"                : "#2c2820",
+    placeholderTitle: editorDark ? "rgba(246,241,234,0.35)" : "rgba(44,40,32,0.28)",
+    placeholderBody:  editorDark ? "rgba(246,241,234,0.35)" : "rgba(44,40,32,0.28)",
+    metaColor:        editorDark ? "rgba(246,241,234,0.55)" : "rgba(44,40,32,0.45)",
+    mutedBorder:      editorDark ? "rgba(255,255,255,0.1)"  : "rgba(0,0,0,0.08)",
+    assistBg:         editorDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)",
+    assistBorder:     editorDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
+    assistText:       editorDark ? "rgba(246,241,234,0.65)" : "rgba(44,40,32,0.5)",
+    chipBorder:       editorDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.1)",
+    chipColor:        editorDark ? "rgba(246,241,234,0.65)" : "rgba(44,40,32,0.5)",
+    resultBg:         editorDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)",
+    resultBorder:     editorDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.07)",
+    resultText:       editorDark ? "#e8e2d9"                : "#2c2820",
+    keepBtn:          editorDark ? "rgba(246,241,234,0.65)" : "rgba(44,40,32,0.4)",
+    keepBorder:       editorDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.1)",
+    pullBg:           editorDark ? "rgba(255,255,255,0.04)" : "rgba(191,155,78,0.04)",
+    pullBorder:       editorDark ? "rgba(255,255,255,0.12)" : "rgba(191,155,78,0.2)",
+    pullText:         editorDark ? "#e8e2d9"                : "#2c2820",
+    barBg:            editorDark ? "#141210"                : "#faf9f7",
+    barBorder:        editorDark ? "rgba(255,255,255,0.1)"  : "rgba(0,0,0,0.08)",
+    saveColor:        editorDark ? "rgba(246,241,234,0.6)"  : "rgba(44,40,32,0.4)",
+    saveBorder:       editorDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.12)",
+    iconStroke:       editorDark ? "rgba(246,241,234,0.6)"  : "rgba(44,40,32,0.35)",
+    tagBg:            editorDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)",
+    tagBorder:        editorDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)",
+    tagText:          editorDark ? "rgba(246,241,234,0.6)"  : "rgba(44,40,32,0.45)",
+    wordOk:           editorDark ? "rgba(246,241,234,0.45)" : "rgba(44,40,32,0.35)",
+    wordWarn:         "#bf9b4e",
+    toggleStroke:     editorDark ? "rgba(246,241,234,0.65)" : "rgba(44,40,32,0.4)",
+    // Publish disabled — must be visible enough to communicate "not yet" without looking broken
+    publishDisabledBg:    editorDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
+    publishDisabledColor: editorDark ? "rgba(246,241,234,0.35)" : "rgba(44,40,32,0.3)",
   };
 
   if (!open) return null;
 
   return (
     <div style={{
-      position:   "fixed",
-      inset:      0,
-      zIndex:     500,
-      background: "var(--permanent-ink)",
-      display:    "flex",
+      position:      "fixed",
+      inset:         0,
+      zIndex:        500,
+      background:    "var(--permanent-ink)",
+      display:       "flex",
       flexDirection: "column",
-      // Slide up from bottom
-      animation:  "shareFlowIn 0.28s cubic-bezier(0.4,0,0.2,1)",
+      animation:     "shareFlowIn 0.28s cubic-bezier(0.4,0,0.2,1)",
     }}>
       {/* Top bar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", height: "56px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
@@ -427,7 +427,7 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
                       Unverified
                     </span>
                   )}
-                  {/* Editor mode toggle */}
+                  {/* Dark / light toggle */}
                   <button
                     onClick={() => setEditorDark(!editorDark)}
                     title={editorDark ? "Switch to light mode" : "Switch to dark mode"}
@@ -460,6 +460,7 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
                     value={answers.chosenName}
                     onChange={(e) => answer("chosenName", e.target.value)}
                     placeholder="Name to display..."
+                    className="annie-editor-name"
                     style={{ width: "100%", background: "transparent", border: "none", borderBottom: `1px solid ${ed.mutedBorder}`, padding: "8px 0", marginBottom: "20px", fontFamily: "'Inter', sans-serif", fontSize: "14px", color: ed.bodyColor, outline: "none", boxSizing: "border-box" }}
                   />
                 )}
@@ -469,6 +470,7 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Give this experience a title..."
+                  className="annie-editor-title"
                   rows={2}
                   style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(22px, 4vw, 30px)", fontWeight: 600, color: ed.titleColor, lineHeight: 1.2, marginBottom: "16px", boxSizing: "border-box", overflow: "hidden" }}
                 />
@@ -479,10 +481,11 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   placeholder="Write your experience here. Take your time. There is no rush — but we ask for at least 50 words so what you share can be carried fully."
+                  className="annie-editor-body"
                   style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", fontFamily: "'Inter', sans-serif", fontSize: "16px", color: ed.bodyColor, lineHeight: 1.85, minHeight: "200px", boxSizing: "border-box" }}
                 />
 
-                {/* Word count + AI assist */}
+                {/* Word count + AI assist trigger */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "12px", paddingTop: "12px", borderTop: `1px solid ${ed.mutedBorder}` }}>
                   <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: wordCount(body) >= 50 ? ed.wordOk : ed.wordWarn }}>
                     {wordCount(body)} words{wordCount(body) < 50 ? ` — ${50 - wordCount(body)} more to publish` : ""}
@@ -550,6 +553,7 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
                       value={pullQuote}
                       onChange={(e) => setPullQuote(e.target.value)}
                       placeholder="Paste the one sentence that carries the most weight. This is what people see first."
+                      className="annie-editor-pull"
                       rows={2}
                       style={{ width: "100%", background: ed.pullBg, border: `1px solid ${ed.pullBorder}`, borderRadius: "8px", padding: "10px 12px", fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "15px", color: ed.pullText, lineHeight: 1.6, resize: "none", outline: "none", boxSizing: "border-box" }}
                     />
@@ -565,7 +569,19 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
               <button
                 disabled={!canPublish || publishing}
                 onClick={handlePublish}
-                style={{ flex: 1, background: canPublish ? "var(--permanent-gold)" : (editorDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"), color: canPublish ? "white" : (editorDark ? "rgba(246,241,234,0.2)" : "rgba(44,40,32,0.25)"), border: "none", borderRadius: "8px", padding: "13px", cursor: canPublish ? "pointer" : "not-allowed", fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 600, transition: "all 0.2s" }}>
+                style={{
+                  flex:        1,
+                  background:  canPublish ? "var(--permanent-gold)" : ed.publishDisabledBg,
+                  color:       canPublish ? "white"                 : ed.publishDisabledColor,
+                  border:      "none",
+                  borderRadius:"8px",
+                  padding:     "13px",
+                  cursor:      canPublish ? "pointer" : "not-allowed",
+                  fontFamily:  "'Inter', sans-serif",
+                  fontSize:    "14px",
+                  fontWeight:  600,
+                  transition:  "all 0.2s",
+                }}>
                 {publishing ? "Publishing..." : "Publish this experience"}
               </button>
               <button
@@ -583,6 +599,10 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
           from { opacity: 0; transform: translateY(12px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        .annie-editor-title::placeholder { color: ${ed.placeholderTitle}; }
+        .annie-editor-body::placeholder  { color: ${ed.placeholderBody};  }
+        .annie-editor-name::placeholder  { color: ${ed.placeholderBody};  }
+        .annie-editor-pull::placeholder  { color: ${ed.placeholderBody};  }
       `}</style>
     </div>
   );
