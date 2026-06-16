@@ -7,6 +7,7 @@ import { assistWriting, AssistMode } from "../lib/ai";
 import { SHARE_TYPES } from "../lib/categories";
 import { getQuestions } from "../lib/questions";
 import { AnnieUser } from "../lib/auth";
+import { publishExperience } from "../lib/experiences";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -170,6 +171,8 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
   const [assistResult, setAssistResult]       = useState("");
   const [assistUsedToday, setAssistUsedToday] = useState(0);
   const [publishing, setPublishing]           = useState(false);
+  const [publishError, setPublishError]       = useState("");
+  const [publishedId, setPublishedId]         = useState("");
   const [editorDark, setEditorDark]           = useState(false);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
@@ -265,10 +268,35 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
 
   const applyAssist = () => { setBody(assistResult); setAssistResult(""); setAssistOpen(false); };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!user) { setStep("signin"); return; }
     setPublishing(true);
-    // TODO: save to Supabase in next sprint
+    setPublishError("");
+
+    const result = await publishExperience({
+      profile_id:       user.id,
+      category:         answers.whoKey,
+      title:            title.trim(),
+      content:          body.trim(),
+      pull_quote:       pullQuote.trim() || undefined,
+      language:         "en",
+      is_anonymous:     answers.identity === "anonymous",
+      is_live:          answers.whoKey === "live",
+      is_historical:    answers.whoKey === "historical",
+      historical_source: undefined,
+      published:        true,
+    });
+
+    if (!result.ok) {
+      setPublishError("Something went wrong. Your draft is saved — try again.");
+      setPublishing(false);
+      return;
+    }
+
+    setPublishedId(result.id);
+    setPublishing(false);
+    // Clear local draft on successful publish
+    try { localStorage.removeItem("annie_draft"); } catch {}
   };
 
   const canPublish  = title.trim().length > 0 && wordCount(body) >= 50;
@@ -565,6 +593,11 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
             </div>
 
             {/* Sticky publish bar */}
+            {publishError && (
+              <div style={{ padding: "8px 20px", background: "rgba(193,58,58,0.1)", borderTop: "1px solid rgba(193,58,58,0.2)" }}>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#e07070", margin: 0, textAlign: "center" }}>{publishError}</p>
+              </div>
+            )}
             <div style={{ borderTop: `1px solid ${ed.barBorder}`, padding: "12px 20px", display: "flex", gap: "10px", alignItems: "center", flexShrink: 0, background: ed.barBg, transition: "background 0.3s ease" }}>
               <button
                 disabled={!canPublish || publishing}
@@ -593,6 +626,28 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
           </div>
         )}
       </div>
+
+      {/* SUCCESS STATE */}
+      {publishedId && (
+        <div style={{ position: "absolute", inset: 0, background: "var(--permanent-ink)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px", textAlign: "center", zIndex: 10 }}>
+          <div style={{ width: "52px", height: "52px", borderRadius: "50%", background: "rgba(191,155,78,0.12)", border: "1px solid var(--permanent-gold)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--permanent-gold)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "28px", fontWeight: 300, color: "var(--permanent-parchment)", marginBottom: "10px" }}>
+            Your experience is published.
+          </h2>
+          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.5)", marginBottom: "32px", lineHeight: 1.6, maxWidth: "320px" }}>
+            It is now part of Annie. Others can read it, carry it forward, and respond to it.
+          </p>
+          <button
+            onClick={handleClose}
+            style={{ background: "var(--permanent-gold)", border: "none", borderRadius: "10px", padding: "13px 32px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 600, color: "white" }}>
+            Back to Annie
+          </button>
+        </div>
+      )}
 
       <style>{`
         @keyframes shareFlowIn {
