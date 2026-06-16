@@ -1,9 +1,7 @@
 "use client";
 // app/page.tsx
-// Thin orchestration layer — no business logic, no UI markup.
-// All logic lives in lib/. All UI lives in components/.
-// This structure makes React Native expansion straightforward —
-// the mobile app imports from lib/ directly and builds its own UI.
+// Clean orchestration — ShareFlow overlay replaces modal + /share page navigation.
+// No page transition, no flash, instant open.
 
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -11,18 +9,17 @@ import { AnnieUser, getCurrentUser, onAuthChange, signInWithGoogle, signOut } fr
 import { FEED_CATEGORIES } from "../lib/categories";
 import Nav from "../components/Nav";
 import SlideMenu from "../components/SlideMenu";
-import ShareModal from "../components/ShareModal";
+import ShareFlow from "../components/ShareFlow";
 import ExperienceCard from "../components/ExperienceCard";
 
 export default function Home() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted]         = useState(false);
-  const [user, setUser]               = useState<AnnieUser | null>(null);
-  const [menuOpen, setMenuOpen]       = useState(false);
-  const [modalOpen, setModalOpen]     = useState(false);
+  const [mounted, setMounted]               = useState(false);
+  const [user, setUser]                     = useState<AnnieUser | null>(null);
+  const [menuOpen, setMenuOpen]             = useState(false);
+  const [shareOpen, setShareOpen]           = useState(false);
   const [activeCategory, setActiveCategory] = useState("individual");
 
-  // Auth init
   useEffect(() => {
     setMounted(true);
     getCurrentUser().then(setUser);
@@ -30,37 +27,36 @@ export default function Home() {
     return unsub;
   }, []);
 
-  // Scroll lock when any overlay is open
+  // Slide menu scroll lock
   useEffect(() => {
     const html = document.documentElement;
-    if (menuOpen || modalOpen) {
+    if (menuOpen) {
       html.style.overflow = "hidden";
       html.style.position = "fixed";
       html.style.width    = "100%";
     } else {
-      html.style.overflow  = "";
-      html.style.position  = "";
-      html.style.width     = "";
+      html.style.overflow = "";
+      html.style.position = "";
+      html.style.width    = "";
     }
     return () => {
-      html.style.overflow  = "";
-      html.style.position  = "";
-      html.style.width     = "";
+      html.style.overflow = "";
+      html.style.position = "";
+      html.style.width    = "";
     };
-  }, [menuOpen, modalOpen]);
+  }, [menuOpen]);
 
-  const handleSignIn    = () => signInWithGoogle(window.location.origin);
-  const handleSignOut   = async () => { await signOut(); setUser(null); setMenuOpen(false); };
-  const handleShare     = () => { setModalOpen(true); setMenuOpen(false); };
+  const handleSignIn      = () => signInWithGoogle(window.location.origin);
+  const handleSignOut     = async () => { await signOut(); setUser(null); setMenuOpen(false); };
+  const handleShare       = () => { setMenuOpen(false); setShareOpen(true); };
   const handleToggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
-  const closeAll        = () => { setMenuOpen(false); setModalOpen(false); };
 
   return (
     <>
-      {/* Backdrop */}
-      {(menuOpen || modalOpen) && (
+      {/* Slide menu backdrop */}
+      {menuOpen && (
         <div
-          onClick={closeAll}
+          onClick={() => setMenuOpen(false)}
           style={{ position: "fixed", inset: 0, background: "rgba(15,14,12,0.7)", zIndex: 200, touchAction: "none" }}
         />
       )}
@@ -70,7 +66,7 @@ export default function Home() {
         user={user}
         theme={theme}
         mounted={mounted}
-        onClose={closeAll}
+        onClose={() => setMenuOpen(false)}
         onSignIn={handleSignIn}
         onSignOut={handleSignOut}
         onShare={handleShare}
@@ -88,7 +84,7 @@ export default function Home() {
         onToggleTheme={handleToggleTheme}
       />
 
-      {/* HERO — paddingTop accounts for fixed nav height */}
+      {/* HERO */}
       <header style={{ background: "var(--permanent-ink)", padding: "108px 20px 48px", textAlign: "center" }}>
         <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "9px", fontWeight: 600, letterSpacing: "3px", textTransform: "uppercase", color: "var(--permanent-gold)", marginBottom: "24px" }}>
           Every experience worth carrying forward
@@ -160,7 +156,6 @@ export default function Home() {
         <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "2.5px", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "20px", paddingBottom: "12px", borderBottom: "1px solid var(--border-default)" }}>
           Featured experience
         </p>
-
         <ExperienceCard
           pullQuote="I left Rwanda at seventeen with one bag and a borrowed phone number. Twenty years later I walked back in as someone who helped rebuild it."
           category="Individual"
@@ -176,7 +171,13 @@ export default function Home() {
         />
       </main>
 
-      <ShareModal open={modalOpen} onClose={closeAll} />
+      {/* SHARE FLOW OVERLAY — no page navigation, instant */}
+      <ShareFlow
+        open={shareOpen}
+        user={user}
+        onClose={() => setShareOpen(false)}
+        onSignIn={handleSignIn}
+      />
 
       <style>{`
         @media (max-width: 640px) {
