@@ -5,6 +5,7 @@
 
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AnnieUser, getCurrentUser, onAuthChange, signInWithGoogle, signOut } from "../lib/auth";
 import { FEED_CATEGORIES } from "../lib/categories";
 import { getFeedExperiences, FeedExperience } from "../lib/experiences";
@@ -199,7 +200,10 @@ export default function Home() {
           const name    = exp.is_anonymous ? "Anonymous" : (exp.display_name || "Someone");
           const initial = exp.is_anonymous ? "A" : (name.charAt(0).toUpperCase() || "?");
           return (
-            <div key={exp.id} style={{ marginBottom: "24px" }}>
+            <Link
+              key={exp.id}
+              href={`/experience/${exp.id}`}
+              style={{ textDecoration: "none", color: "inherit", display: "block", marginBottom: "24px" }}>
               <ExperienceCard
                 pullQuote={exp.pull_quote || excerpt}
                 category={exp.category.charAt(0).toUpperCase() + exp.category.slice(1)}
@@ -212,7 +216,7 @@ export default function Home() {
                 readTime={exp.read_time_minutes}
                 isLive={exp.is_live}
               />
-            </div>
+            </Link>
           );
         })}
       </main>
