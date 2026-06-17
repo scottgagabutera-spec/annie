@@ -105,3 +105,20 @@ export async function getFeedExperiences(category?: string): Promise<FeedExperie
   if (error) return [];
   return data as FeedExperience[];
 }
+
+export async function getExperienceById(id: string): Promise<FeedExperience | null> {
+  const { data, error } = await supabase
+    .from("experiences")
+    .select("*")
+    .eq("id", id)
+    .eq("published", true)
+    .single();
+
+  if (error || !data) return null;
+  return data as FeedExperience;
+}
+
+export async function carryForward(id: string): Promise<boolean> {
+  const { error } = await supabase.rpc("increment_carried_forward", { experience_id: id });
+  return !error;
+}
