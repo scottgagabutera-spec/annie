@@ -30,12 +30,15 @@ export default function Home() {
     return unsub;
   }, []);
 
-  useEffect(() => {
+  const loadFeed = async () => {
     setFeedLoading(true);
-    getFeedExperiences(activeCategory).then((data) => {
-      setExperiences(data);
-      setFeedLoading(false);
-    });
+    const data = await getFeedExperiences(activeCategory);
+    setExperiences(data);
+    setFeedLoading(false);
+  };
+
+  useEffect(() => {
+    loadFeed();
   }, [activeCategory]);
 
   // Slide menu scroll lock
@@ -186,8 +189,8 @@ export default function Home() {
 
         {!feedLoading && experiences.map((exp) => {
           const excerpt = exp.content.slice(0, 180).trim() + (exp.content.length > 180 ? "..." : "");
-          const initial = exp.is_anonymous ? "A" : "?";
-          const name    = exp.is_anonymous ? "Anonymous" : "Someone";
+          const name    = exp.is_anonymous ? "Anonymous" : (exp.display_name || "Someone");
+          const initial = exp.is_anonymous ? "A" : (name.charAt(0).toUpperCase() || "?");
           return (
             <div key={exp.id} style={{ marginBottom: "24px" }}>
               <ExperienceCard
@@ -213,6 +216,7 @@ export default function Home() {
         user={user}
         onClose={() => setShareOpen(false)}
         onSignIn={handleSignIn}
+        onPublished={loadFeed}
       />
 
       <style>{`

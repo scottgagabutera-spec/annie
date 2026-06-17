@@ -16,6 +16,7 @@ export type NewExperience = {
   is_historical:     boolean;
   historical_source?: string;
   published:         boolean;
+  display_name?:     string;
 };
 
 export type PublishResult =
@@ -36,6 +37,7 @@ export async function publishExperience(exp: NewExperience): Promise<PublishResu
       is_live:           exp.is_live,
       is_historical:     exp.is_historical,
       historical_source: exp.historical_source || null,
+      display_name:      exp.display_name || null,
       published:         true,
       carried_forward_count: 0,
       response_count:        0,
@@ -84,6 +86,7 @@ export type FeedExperience = {
   read_time_minutes:    number;
   created_at:           string;
   profile_id:           string;
+  display_name:         string | null;
 };
 
 export async function getFeedExperiences(category?: string): Promise<FeedExperience[]> {
