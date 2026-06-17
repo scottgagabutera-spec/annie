@@ -11,7 +11,7 @@ import { FEED_CATEGORIES } from "../lib/categories";
 import { getFeedExperiences, FeedExperience } from "../lib/experiences";
 import Nav from "../components/Nav";
 import SlideMenu from "../components/SlideMenu";
-import ShareFlow from "../components/ShareFlow";
+import ShareFlow, { PENDING_PUBLISH_KEY } from "../components/ShareFlow";
 import ExperienceCard from "../components/ExperienceCard";
 
 export default function Home() {
@@ -20,14 +20,27 @@ export default function Home() {
   const [user, setUser]                     = useState<AnnieUser | null>(null);
   const [menuOpen, setMenuOpen]             = useState(false);
   const [shareOpen, setShareOpen]           = useState(false);
+  const [resumePublish, setResumePublish]   = useState(false);
   const [activeCategory, setActiveCategory] = useState("individual");
   const [experiences, setExperiences]       = useState<FeedExperience[]>([]);
   const [feedLoading, setFeedLoading]       = useState(true);
 
+  const checkPendingPublish = (signedInUser: AnnieUser | null) => {
+    if (!signedInUser) return;
+    try {
+      const pending = localStorage.getItem(PENDING_PUBLISH_KEY);
+      if (pending === "true") {
+        localStorage.removeItem(PENDING_PUBLISH_KEY);
+        setResumePublish(true);
+        setShareOpen(true);
+      }
+    } catch {}
+  };
+
   useEffect(() => {
     setMounted(true);
-    getCurrentUser().then(setUser);
-    const unsub = onAuthChange(setUser);
+    getCurrentUser().then((u) => { setUser(u); checkPendingPublish(u); });
+    const unsub = onAuthChange((u) => { setUser(u); checkPendingPublish(u); });
     return unsub;
   }, []);
 
@@ -225,9 +238,10 @@ export default function Home() {
       <ShareFlow
         open={shareOpen}
         user={user}
-        onClose={() => setShareOpen(false)}
+        onClose={() => { setShareOpen(false); setResumePublish(false); }}
         onSignIn={handleSignIn}
         onPublished={loadFeed}
+        resumeDraft={resumePublish}
       />
 
       <style>{`

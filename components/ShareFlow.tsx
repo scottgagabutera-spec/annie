@@ -32,6 +32,8 @@ function wordCount(t: string) {
 const FREE_DAILY_ASSIST = 3;
 const DRAFT_KEY         = "annie_draft";
 
+export const PENDING_PUBLISH_KEY = "annie_pending_publish";
+
 function saveDraftLocally(draft: Draft) {
   try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch {}
 }
@@ -188,9 +190,10 @@ type Props = {
   onSignIn:      () => void;
   onPublished:   () => void;
   initialType?:  string;
+  resumeDraft?:  boolean;
 };
 
-export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, initialType }: Props) {
+export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, initialType, resumeDraft }: Props) {
   const [step, setStep]           = useState<Step>("who");
   const [answers, setAnswers]     = useState<Answers>({ ...BLANK_ANSWERS, whoKey: initialType || "" });
   const [title, setTitle]         = useState("");
@@ -209,9 +212,29 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
   const [editorDark, setEditorDark]           = useState(false);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
-  // On open: always start fresh at "who", check if a draft exists and show banner
+  // On open: if returning from a sign-in redirect with a pending publish,
+  // restore the draft exactly and go straight to write. Otherwise start
+  // fresh at "who" and surface the draft banner if one happens to exist.
   useEffect(() => {
     if (!open) return;
+
+    if (resumeDraft) {
+      const draft = loadDraftLocally();
+      if (draft) {
+        setAnswers(draft.answers);
+        setTitle(draft.title);
+        setBody(draft.body);
+        setPullQuote(draft.pullQuote);
+        setStep("write");
+        setShowDraftBanner(false);
+        setPublishedId("");
+        setPublishError("");
+        setAssistOpen(false);
+        setAssistResult("");
+        return;
+      }
+    }
+
     setStep("who");
     setAnswers({ ...BLANK_ANSWERS, whoKey: initialType || "" });
     setTitle("");
@@ -222,7 +245,7 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
     setAssistOpen(false);
     setAssistResult("");
     setShowDraftBanner(hasDraft());
-  }, [open]);
+  }, [open, resumeDraft]);
 
   // Auto-save draft every 10s while writing
   useEffect(() => {
@@ -337,7 +360,12 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
   const applyAssist = () => { setBody(assistResult); setAssistResult(""); setAssistOpen(false); };
 
   const handlePublish = async () => {
-    if (!user) { setStep("signin"); return; }
+    if (!user) {
+      saveDraftLocally({ answers, title, body, pullQuote });
+      try { localStorage.setItem(PENDING_PUBLISH_KEY, "true"); } catch {}
+      setStep("signin");
+      return;
+    }
     setPublishing(true);
     setPublishError("");
 
