@@ -12,13 +12,14 @@ type Props = {
   theme: string | undefined;
   mounted: boolean;
   onMenuOpen: () => void;
+  onLogoClick: () => void;
   onSignIn: () => void;
   onSignOut: () => void;
   onShare: () => void;
   onToggleTheme: () => void;
 };
 
-export default function Nav({ user, theme, mounted, onMenuOpen, onSignIn, onSignOut, onShare, onToggleTheme }: Props) {
+export default function Nav({ user, theme, mounted, onMenuOpen, onLogoClick, onSignIn, onSignOut, onShare, onToggleTheme }: Props) {
   const [visible, setVisible] = useState(true);
   const lastScrollY = useRef(0);
   const ticking = useRef(false);
@@ -68,10 +69,24 @@ export default function Nav({ user, theme, mounted, onMenuOpen, onSignIn, onSign
       transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
       willChange: "transform",
     }}>
-      {/* Logo */}
-      <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "24px", fontWeight: 600, color: "var(--permanent-parchment)", letterSpacing: "0.5px" }}>
+      {/* Logo — now a real "go home" action */}
+      <button
+        onClick={onLogoClick}
+        aria-label="Annie, go to homepage"
+        style={{
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          padding: 0,
+          fontFamily: "'Cormorant Garamond', serif",
+          fontSize: "24px",
+          fontWeight: 600,
+          color: "var(--permanent-parchment)",
+          letterSpacing: "0.5px",
+          lineHeight: 1,
+        }}>
         Annie<span style={{ color: "var(--permanent-gold)" }}>.</span>
-      </div>
+      </button>
 
       {/* Desktop nav */}
       <div className="desktop-nav" style={{ display: "flex", alignItems: "center", gap: "16px" }}>
@@ -118,7 +133,7 @@ export default function Nav({ user, theme, mounted, onMenuOpen, onSignIn, onSign
       {/* Mobile nav */}
       <div className="mobile-nav" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         {user && <Avatar user={user} size={28} />}
-        <button onClick={onMenuOpen} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "6px", display: "flex", alignItems: "center" }}>
+        <button onClick={onMenuOpen} aria-label="Open menu" style={{ background: "transparent", border: "none", cursor: "pointer", padding: "6px", display: "flex", alignItems: "center" }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--permanent-parchment)" strokeWidth="1.6" strokeLinecap="round">
             <line x1="3" y1="6" x2="21" y2="6"/>
             <line x1="3" y1="12" x2="21" y2="12"/>

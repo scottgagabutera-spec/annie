@@ -64,6 +64,12 @@ export default function Home() {
   const handleSignOut     = async () => { await signOut(); setUser(null); setMenuOpen(false); };
   const handleShare       = () => { setMenuOpen(false); setShareOpen(true); };
   const handleToggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
+  const handleLogoClick   = () => {
+    setShareOpen(false);
+    setMenuOpen(false);
+    setActiveCategory("individual");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <>
@@ -92,6 +98,7 @@ export default function Home() {
         theme={theme}
         mounted={mounted}
         onMenuOpen={() => setMenuOpen(true)}
+        onLogoClick={handleLogoClick}
         onSignIn={handleSignIn}
         onSignOut={handleSignOut}
         onShare={handleShare}
