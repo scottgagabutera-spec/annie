@@ -1,6 +1,5 @@
 "use client";
 // components/ShareFlow.tsx
-// Full-screen overlay share flow — no page navigation, no flash.
 
 import { useEffect, useRef, useState } from "react";
 import { assistWriting, AssistMode } from "../lib/ai";
@@ -8,8 +7,6 @@ import { SHARE_TYPES } from "../lib/categories";
 import { getQuestions } from "../lib/questions";
 import { AnnieUser } from "../lib/auth";
 import { publishExperience } from "../lib/experiences";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Step = "who" | "q1" | "q2" | "q3" | "write" | "signin";
 
@@ -27,8 +24,6 @@ type Draft = {
   body:      string;
   pullQuote: string;
 };
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function wordCount(t: string) {
   return t.trim().split(/\s+/).filter(Boolean).length;
@@ -48,6 +43,23 @@ function loadDraftLocally(): Draft | null {
   } catch { return null; }
 }
 
+function clearDraftLocally() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch {}
+}
+
+function hasDraft(): boolean {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw) as Draft;
+    return !!(d.title?.trim() || d.body?.trim());
+  } catch { return false; }
+}
+
+const BLANK_ANSWERS: Answers = {
+  whoKey: "", witnessed: null, truthful: null, identity: null, chosenName: "",
+};
+
 // ─── Progress bar ─────────────────────────────────────────────────────────────
 
 function ProgressBar({ step, skipQ1 }: { step: Step; skipQ1: boolean }) {
@@ -63,11 +75,33 @@ function ProgressBar({ step, skipQ1 }: { step: Step; skipQ1: boolean }) {
   );
 }
 
+// ─── Draft banner ─────────────────────────────────────────────────────────────
+
+function DraftBanner({ onContinue, onDiscard }: { onContinue: () => void; onDiscard: () => void }) {
+  return (
+    <div style={{ margin: "0 0 20px", background: "rgba(191,155,78,0.08)", border: "1px solid rgba(191,155,78,0.25)", borderRadius: "10px", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" as const }}>
+      <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.75)", margin: 0 }}>
+        You have an unfinished experience.
+      </p>
+      <div style={{ display: "flex", gap: "8px" }}>
+        <button
+          onClick={onContinue}
+          style={{ background: "var(--permanent-gold)", border: "none", borderRadius: "6px", padding: "7px 14px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 600, color: "white" }}>
+          Continue it
+        </button>
+        <button
+          onClick={onDiscard}
+          style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "6px", padding: "7px 14px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "rgba(246,241,234,0.45)" }}>
+          Start fresh
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Question screen ──────────────────────────────────────────────────────────
 
-function QuestionScreen({
-  question, sub, options, onAnswer, onBack, step, skipQ1,
-}: {
+function QuestionScreen({ question, sub, options, onAnswer, onBack, step, skipQ1 }: {
   question: string; sub: string;
   options: { key: string; label: string; note?: string }[];
   onAnswer: (key: string) => void;
@@ -128,9 +162,7 @@ function SignInGate({ onSignIn, onBack }: { onSignIn: () => void; onBack: () => 
         <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "rgba(246,241,234,0.3)", marginBottom: "32px" }}>
           No account yet? Signing in with Google sets one up right away.
         </p>
-        <button
-          onClick={onSignIn}
-          style={{ width: "100%", background: "var(--permanent-gold)", border: "none", borderRadius: "10px", padding: "15px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 600, color: "white", marginBottom: "12px", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px" }}>
+        <button onClick={onSignIn} style={{ width: "100%", background: "var(--permanent-gold)", border: "none", borderRadius: "10px", padding: "15px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 600, color: "white", marginBottom: "12px", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px" }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -150,21 +182,22 @@ function SignInGate({ onSignIn, onBack }: { onSignIn: () => void; onBack: () => 
 // ─── Main ShareFlow ───────────────────────────────────────────────────────────
 
 type Props = {
-  open:         boolean;
-  user:         AnnieUser | null;
-  onClose:      () => void;
-  onSignIn:     () => void;
-  initialType?: string;
+  open:          boolean;
+  user:          AnnieUser | null;
+  onClose:       () => void;
+  onSignIn:      () => void;
+  onPublished:   () => void;
+  initialType?:  string;
 };
 
-export default function ShareFlow({ open, user, onClose, onSignIn, initialType }: Props) {
-  const [step, setStep]       = useState<Step>(initialType ? "q1" : "who");
-  const [answers, setAnswers] = useState<Answers>({
-    whoKey: initialType || "", witnessed: null, truthful: null, identity: null, chosenName: "",
-  });
+export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, initialType }: Props) {
+  const [step, setStep]           = useState<Step>("who");
+  const [answers, setAnswers]     = useState<Answers>({ ...BLANK_ANSWERS, whoKey: initialType || "" });
   const [title, setTitle]         = useState("");
   const [body, setBody]           = useState("");
   const [pullQuote, setPullQuote] = useState("");
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+
   const [assistOpen, setAssistOpen]           = useState(false);
   const [assistLoading, setAssistLoading]     = useState(false);
   const [assistMode, setAssistMode]           = useState<AssistMode>("improve");
@@ -176,17 +209,19 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
   const [editorDark, setEditorDark]           = useState(false);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
-  // Load local draft on open
+  // On open: always start fresh at "who", check if a draft exists and show banner
   useEffect(() => {
     if (!open) return;
-    const draft = loadDraftLocally();
-    if (draft && !title && !body) {
-      setAnswers(draft.answers);
-      setTitle(draft.title);
-      setBody(draft.body);
-      setPullQuote(draft.pullQuote);
-      if (draft.answers.whoKey) setStep("write");
-    }
+    setStep("who");
+    setAnswers({ ...BLANK_ANSWERS, whoKey: initialType || "" });
+    setTitle("");
+    setBody("");
+    setPullQuote("");
+    setPublishedId("");
+    setPublishError("");
+    setAssistOpen(false);
+    setAssistResult("");
+    setShowDraftBanner(hasDraft());
   }, [open]);
 
   // Auto-save draft every 10s while writing
@@ -251,8 +286,41 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
   };
 
   const handleClose = () => {
-    saveDraftLocally({ answers, title, body, pullQuote });
+    if (title.trim() || body.trim()) {
+      saveDraftLocally({ answers, title, body, pullQuote });
+    }
     onClose();
+  };
+
+  const handleContinueDraft = () => {
+    const draft = loadDraftLocally();
+    if (!draft) return;
+    setAnswers(draft.answers);
+    setTitle(draft.title);
+    setBody(draft.body);
+    setPullQuote(draft.pullQuote);
+    setShowDraftBanner(false);
+    setStep("write");
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraftLocally();
+    setShowDraftBanner(false);
+  };
+
+  // Resolve display name based on identity choice
+  const resolveDisplayName = (): { name: string; initial: string; isAnonymous: boolean } => {
+    if (answers.identity === "anonymous") {
+      return { name: "Shared anonymously", initial: "A", isAnonymous: true };
+    }
+    if (answers.identity === "chosen" && answers.chosenName.trim()) {
+      const n = answers.chosenName.trim();
+      return { name: n, initial: n[0].toUpperCase(), isAnonymous: false };
+    }
+    if (answers.identity === "name" && user) {
+      return { name: user.name, initial: user.name[0].toUpperCase(), isAnonymous: false };
+    }
+    return { name: "Anonymous", initial: "A", isAnonymous: true };
   };
 
   const handleAssist = async () => {
@@ -273,42 +341,52 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
     setPublishing(true);
     setPublishError("");
 
+    const { isAnonymous, name } = resolveDisplayName();
+
     const result = await publishExperience({
-      profile_id:       user.id,
-      category:         answers.whoKey,
-      title:            title.trim(),
-      content:          body.trim(),
-      pull_quote:       pullQuote.trim() || undefined,
-      language:         "en",
-      is_anonymous:     answers.identity === "anonymous",
-      is_live:          answers.whoKey === "live",
-      is_historical:    answers.whoKey === "historical",
+      profile_id:        user.id,
+      category:          answers.whoKey,
+      title:             title.trim(),
+      content:           body.trim(),
+      pull_quote:        pullQuote.trim() || undefined,
+      language:          "en",
+      is_anonymous:      isAnonymous,
+      is_live:           answers.whoKey === "live",
+      is_historical:     answers.whoKey === "historical",
       historical_source: undefined,
-      published:        true,
+      published:         true,
+      display_name:      isAnonymous ? undefined : name,
     });
 
     if (!result.ok) {
-      setPublishError("Something went wrong. Your draft is saved — try again.");
+      setPublishError("Something went wrong. Your draft is saved. Try again.");
       setPublishing(false);
       return;
     }
 
+    // Clear draft, reload feed, show success
+    clearDraftLocally();
     setPublishedId(result.id);
     setPublishing(false);
-    // Clear local draft on successful publish
-    try { localStorage.removeItem("annie_draft"); } catch {}
+    onPublished();
+  };
+
+  // Back to Annie from success screen — reset everything
+  const handleSuccessClose = () => {
+    setPublishedId("");
+    setStep("who");
+    setAnswers({ ...BLANK_ANSWERS });
+    setTitle("");
+    setBody("");
+    setPullQuote("");
+    onClose();
   };
 
   const canPublish  = title.trim().length > 0 && wordCount(body) >= 50;
   const assistsLeft = Math.max(0, FREE_DAILY_ASSIST - assistUsedToday);
-  const isPlus      = false; // TODO: read from user profile
+  const isPlus      = false;
   const whoLabel    = SHARE_TYPES.find((t) => t.key === answers.whoKey)?.label || "";
 
-  // ─── Editor theme tokens ───────────────────────────────────────────────────
-  // CONTRAST RULE: every value here must be legible on its background.
-  // Dark mode: minimum 0.5 opacity for secondary text, 0.35 for placeholders
-  // (placeholders are intentionally dimmer than real content — but still readable).
-  // Light mode: dark ink on warm white, placeholders at 0.28 (enough to see, not compete).
   const ed = {
     bg:               editorDark ? "#141210"                : "#faf9f7",
     titleColor:       editorDark ? "#f6f1ea"                : "#1a1814",
@@ -341,7 +419,6 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
     wordOk:           editorDark ? "rgba(246,241,234,0.45)" : "rgba(44,40,32,0.35)",
     wordWarn:         "#bf9b4e",
     toggleStroke:     editorDark ? "rgba(246,241,234,0.65)" : "rgba(44,40,32,0.4)",
-    // Publish disabled — must be visible enough to communicate "not yet" without looking broken
     publishDisabledBg:    editorDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
     publishDisabledColor: editorDark ? "rgba(246,241,234,0.35)" : "rgba(44,40,32,0.3)",
   };
@@ -349,15 +426,8 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
   if (!open) return null;
 
   return (
-    <div style={{
-      position:      "fixed",
-      inset:         0,
-      zIndex:        500,
-      background:    "var(--permanent-ink)",
-      display:       "flex",
-      flexDirection: "column",
-      animation:     "shareFlowIn 0.28s cubic-bezier(0.4,0,0.2,1)",
-    }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "var(--permanent-ink)", display: "flex", flexDirection: "column", animation: "shareFlowIn 0.28s cubic-bezier(0.4,0,0.2,1)" }}>
+
       {/* Top bar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", height: "56px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
         <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "20px", fontWeight: 600, color: "var(--permanent-parchment)" }}>
@@ -370,7 +440,6 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
         </button>
       </div>
 
-      {/* Content */}
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
 
         {/* WHO */}
@@ -378,6 +447,9 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
           <div style={{ flex: 1, overflowY: "auto", padding: "40px 24px" }}>
             <ProgressBar step="who" skipQ1={false} />
             <div style={{ maxWidth: "560px", margin: "32px auto 0" }}>
+              {showDraftBanner && (
+                <DraftBanner onContinue={handleContinueDraft} onDiscard={handleDiscardDraft} />
+              )}
               <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(26px, 5vw, 34px)", fontWeight: 300, color: "var(--permanent-parchment)", marginBottom: "8px" }}>
                 Who is sharing this?
               </h2>
@@ -402,45 +474,27 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
           </div>
         )}
 
-        {/* Q1 */}
         {step === "q1" && (
-          <QuestionScreen step="q1" skipQ1={skipQ1}
-            question={qs.q1.question} sub={qs.q1.sub} options={qs.q1.options}
-            onAnswer={(key) => { answer("witnessed", key); setStep("q2"); }}
-            onBack={goBack} />
+          <QuestionScreen step="q1" skipQ1={skipQ1} question={qs.q1.question} sub={qs.q1.sub} options={qs.q1.options}
+            onAnswer={(key) => { answer("witnessed", key); setStep("q2"); }} onBack={goBack} />
         )}
-
-        {/* Q2 */}
         {step === "q2" && (
-          <QuestionScreen step="q2" skipQ1={skipQ1}
-            question={qs.q2.question} sub={qs.q2.sub} options={qs.q2.options}
-            onAnswer={(key) => { answer("truthful", key); setStep("q3"); }}
-            onBack={goBack} />
+          <QuestionScreen step="q2" skipQ1={skipQ1} question={qs.q2.question} sub={qs.q2.sub} options={qs.q2.options}
+            onAnswer={(key) => { answer("truthful", key); setStep("q3"); }} onBack={goBack} />
         )}
-
-        {/* Q3 */}
         {step === "q3" && (
-          <QuestionScreen step="q3" skipQ1={skipQ1}
-            question={qs.q3.question} sub={qs.q3.sub} options={qs.q3.options}
-            onAnswer={(key) => { answer("identity", key); setStep("write"); }}
-            onBack={goBack} />
+          <QuestionScreen step="q3" skipQ1={skipQ1} question={qs.q3.question} sub={qs.q3.sub} options={qs.q3.options}
+            onAnswer={(key) => { answer("identity", key); setStep("write"); }} onBack={goBack} />
         )}
-
-        {/* SIGN IN GATE */}
-        {step === "signin" && (
-          <SignInGate onSignIn={onSignIn} onBack={goBack} />
-        )}
+        {step === "signin" && <SignInGate onSignIn={onSignIn} onBack={goBack} />}
 
         {/* WRITE */}
         {step === "write" && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: ed.bg, transition: "background 0.3s ease" }}>
             <ProgressBar step="write" skipQ1={skipQ1} />
-
-            {/* Scrollable editor area */}
             <div style={{ flex: 1, overflowY: "auto", padding: "24px 24px 8px" }}>
               <div style={{ maxWidth: "680px", margin: "0 auto" }}>
 
-                {/* Context row */}
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "24px" }}>
                   <button onClick={goBack} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px", lineHeight: 0 }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ed.iconStroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -455,15 +509,10 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
                       Unverified
                     </span>
                   )}
-                  {/* Dark / light toggle */}
-                  <button
-                    onClick={() => setEditorDark(!editorDark)}
-                    title={editorDark ? "Switch to light mode" : "Switch to dark mode"}
-                    style={{ marginLeft: "auto", background: "transparent", border: "none", cursor: "pointer", padding: "4px", lineHeight: 0, display: "flex", alignItems: "center", gap: "5px" }}>
+                  <button onClick={() => setEditorDark(!editorDark)} title={editorDark ? "Switch to light mode" : "Switch to dark mode"} style={{ marginLeft: "auto", background: "transparent", border: "none", cursor: "pointer", padding: "4px", lineHeight: 0, display: "flex", alignItems: "center", gap: "5px" }}>
                     {editorDark ? (
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ed.toggleStroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="4"/>
-                        <line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/>
+                        <circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/>
                         <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
                         <line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/>
                         <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
@@ -473,53 +522,43 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
                       </svg>
                     )}
-                    <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", color: ed.metaColor }}>
-                      {editorDark ? "Light" : "Dark"}
-                    </span>
+                    <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", color: ed.metaColor }}>{editorDark ? "Light" : "Dark"}</span>
                   </button>
-                  <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", color: ed.metaColor }}>
-                    Saved
-                  </span>
+                  <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", color: ed.metaColor }}>Saved</span>
                 </div>
 
-                {/* Chosen name */}
                 {answers.identity === "chosen" && (
-                  <input
-                    value={answers.chosenName}
-                    onChange={(e) => answer("chosenName", e.target.value)}
-                    placeholder="What name should appear with this?"
-                    className="annie-editor-name"
-                    style={{ width: "100%", background: "transparent", border: "none", borderBottom: `1px solid ${ed.mutedBorder}`, padding: "8px 0", marginBottom: "20px", fontFamily: "'Inter', sans-serif", fontSize: "14px", color: ed.bodyColor, outline: "none", boxSizing: "border-box" }}
-                  />
+                  <input value={answers.chosenName} onChange={(e) => answer("chosenName", e.target.value)}
+                    placeholder="What name should appear with this?" className="annie-editor-name"
+                    style={{ width: "100%", background: "transparent", border: "none", borderBottom: `1px solid ${ed.mutedBorder}`, padding: "8px 0", marginBottom: "20px", fontFamily: "'Inter', sans-serif", fontSize: "14px", color: ed.bodyColor, outline: "none", boxSizing: "border-box" }} />
                 )}
 
-                {/* Title */}
-                <textarea
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="What would you call this experience?"
-                  className="annie-editor-title"
-                  rows={2}
-                  style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(22px, 4vw, 30px)", fontWeight: 600, color: ed.titleColor, lineHeight: 1.2, marginBottom: "16px", boxSizing: "border-box", overflow: "hidden" }}
-                />
+                {answers.identity === "name" && user && (
+                  <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: ed.metaColor, marginBottom: "16px" }}>
+                    Publishing as {user.name}
+                  </p>
+                )}
 
-                {/* Body */}
-                <textarea
-                  ref={bodyRef}
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
+                {answers.identity === "anonymous" && (
+                  <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: ed.metaColor, marginBottom: "16px" }}>
+                    Publishing anonymously
+                  </p>
+                )}
+
+                <textarea value={title} onChange={(e) => setTitle(e.target.value)}
+                  placeholder="What would you call this experience?" className="annie-editor-title" rows={2}
+                  style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(22px, 4vw, 30px)", fontWeight: 600, color: ed.titleColor, lineHeight: 1.2, marginBottom: "16px", boxSizing: "border-box", overflow: "hidden" }} />
+
+                <textarea ref={bodyRef} value={body} onChange={(e) => setBody(e.target.value)}
                   placeholder="Write your experience here. Take as much space as you need. We only ask for at least 50 words so the full story comes through."
                   className="annie-editor-body"
-                  style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", fontFamily: "'Inter', sans-serif", fontSize: "16px", color: ed.bodyColor, lineHeight: 1.85, minHeight: "200px", boxSizing: "border-box" }}
-                />
+                  style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", fontFamily: "'Inter', sans-serif", fontSize: "16px", color: ed.bodyColor, lineHeight: 1.85, minHeight: "200px", boxSizing: "border-box" }} />
 
-                {/* Word count + AI assist trigger */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "12px", paddingTop: "12px", borderTop: `1px solid ${ed.mutedBorder}` }}>
                   <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: wordCount(body) >= 50 ? ed.wordOk : ed.wordWarn }}>
                     {wordCount(body)} words{wordCount(body) < 50 ? ` — ${50 - wordCount(body)} more words needed to publish` : ""}
                   </span>
-                  <button
-                    onClick={() => setAssistOpen(!assistOpen)}
+                  <button onClick={() => setAssistOpen(!assistOpen)}
                     style={{ background: assistOpen ? "rgba(191,155,78,0.1)" : "transparent", border: `1px solid ${assistOpen ? "var(--permanent-gold)" : ed.chipBorder}`, borderRadius: "6px", padding: "5px 10px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 600, color: assistOpen ? "var(--permanent-gold)" : ed.chipColor, display: "flex", alignItems: "center", gap: "5px" }}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
@@ -528,23 +567,16 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
                   </button>
                 </div>
 
-                {/* AI assist panel */}
                 {assistOpen && (
                   <div style={{ marginTop: "12px", background: ed.assistBg, border: `1px solid ${ed.assistBorder}`, borderRadius: "10px", padding: "14px" }}>
                     {!isPlus && assistUsedToday >= FREE_DAILY_ASSIST ? (
                       <div style={{ textAlign: "center", padding: "8px 0" }}>
-                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: ed.assistText, marginBottom: "12px" }}>
-                          You have reached your 3 free assists for today.
-                        </p>
-                        <button style={{ background: "var(--permanent-gold)", border: "none", borderRadius: "7px", padding: "10px 20px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white" }}>
-                          Get Annie Plus for unlimited assists
-                        </button>
+                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: ed.assistText, marginBottom: "12px" }}>You have reached your 3 free assists for today.</p>
+                        <button style={{ background: "var(--permanent-gold)", border: "none", borderRadius: "7px", padding: "10px 20px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white" }}>Get Annie Plus for unlimited assists</button>
                       </div>
                     ) : (
                       <>
-                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: ed.assistText, marginBottom: "10px" }}>
-                          Annie can offer a suggestion. You choose what to keep. Nothing changes without you deciding it does.
-                        </p>
+                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: ed.assistText, marginBottom: "10px" }}>Annie can offer a suggestion. You choose what to keep. Nothing changes without you deciding it does.</p>
                         <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "10px" }}>
                           {(["improve", "paraphrase", "shorten", "expand"] as AssistMode[]).map((m) => (
                             <button key={m} onClick={() => setAssistMode(m)} style={{ padding: "5px 10px", borderRadius: "6px", border: `1px solid ${assistMode === m ? "var(--permanent-gold)" : ed.chipBorder}`, background: assistMode === m ? "rgba(191,155,78,0.1)" : "transparent", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 600, color: assistMode === m ? "var(--permanent-gold)" : ed.chipColor, cursor: "pointer", textTransform: "capitalize" }}>
@@ -552,14 +584,13 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
                             </button>
                           ))}
                         </div>
-                        <button onClick={handleAssist} disabled={!body.trim() || assistLoading} style={{ width: "100%", background: "var(--permanent-gold)", border: "none", borderRadius: "7px", padding: "9px", cursor: body.trim() ? "pointer" : "not-allowed", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white", opacity: body.trim() ? 1 : 0.4 }}>
+                        <button onClick={handleAssist} disabled={!body.trim() || assistLoading}
+                          style={{ width: "100%", background: "var(--permanent-gold)", border: "none", borderRadius: "7px", padding: "9px", cursor: body.trim() ? "pointer" : "not-allowed", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white", opacity: body.trim() ? 1 : 0.4 }}>
                           {assistLoading ? "Thinking..." : "Show me a suggestion"}
                         </button>
                         {assistResult && (
                           <div style={{ marginTop: "12px" }}>
-                            <div style={{ background: ed.resultBg, border: `1px solid ${ed.resultBorder}`, borderRadius: "8px", padding: "12px", fontFamily: "'Inter', sans-serif", fontSize: "14px", color: ed.resultText, lineHeight: 1.7, marginBottom: "8px", whiteSpace: "pre-wrap" }}>
-                              {assistResult}
-                            </div>
+                            <div style={{ background: ed.resultBg, border: `1px solid ${ed.resultBorder}`, borderRadius: "8px", padding: "12px", fontFamily: "'Inter', sans-serif", fontSize: "14px", color: ed.resultText, lineHeight: 1.7, marginBottom: "8px", whiteSpace: "pre-wrap" }}>{assistResult}</div>
                             <div style={{ display: "flex", gap: "8px" }}>
                               <button onClick={applyAssist} style={{ flex: 1, background: "var(--permanent-gold)", border: "none", borderRadius: "7px", padding: "9px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white" }}>Use this version</button>
                               <button onClick={() => setAssistResult("")} style={{ flex: 1, background: "transparent", border: `1px solid ${ed.keepBorder}`, borderRadius: "7px", padding: "9px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: ed.keepBtn }}>Keep what I wrote</button>
@@ -571,20 +602,13 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
                   </div>
                 )}
 
-                {/* Pull quote */}
                 {wordCount(body) >= 30 && (
                   <div style={{ marginTop: "20px" }}>
-                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: ed.metaColor, marginBottom: "8px" }}>
-                      A line to lead with (optional)
-                    </p>
-                    <textarea
-                      value={pullQuote}
-                      onChange={(e) => setPullQuote(e.target.value)}
+                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: ed.metaColor, marginBottom: "8px" }}>A line to lead with (optional)</p>
+                    <textarea value={pullQuote} onChange={(e) => setPullQuote(e.target.value)}
                       placeholder="If one sentence from what you wrote stays with you the most, put it here. People will read this first."
-                      className="annie-editor-pull"
-                      rows={2}
-                      style={{ width: "100%", background: ed.pullBg, border: `1px solid ${ed.pullBorder}`, borderRadius: "8px", padding: "10px 12px", fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "15px", color: ed.pullText, lineHeight: 1.6, resize: "none", outline: "none", boxSizing: "border-box" }}
-                    />
+                      className="annie-editor-pull" rows={2}
+                      style={{ width: "100%", background: ed.pullBg, border: `1px solid ${ed.pullBorder}`, borderRadius: "8px", padding: "10px 12px", fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "15px", color: ed.pullText, lineHeight: 1.6, resize: "none", outline: "none", boxSizing: "border-box" }} />
                   </div>
                 )}
 
@@ -592,33 +616,17 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
               </div>
             </div>
 
-            {/* Sticky publish bar */}
             {publishError && (
               <div style={{ padding: "8px 20px", background: "rgba(193,58,58,0.1)", borderTop: "1px solid rgba(193,58,58,0.2)" }}>
                 <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#e07070", margin: 0, textAlign: "center" }}>{publishError}</p>
               </div>
             )}
             <div style={{ borderTop: `1px solid ${ed.barBorder}`, padding: "12px 20px", display: "flex", gap: "10px", alignItems: "center", flexShrink: 0, background: ed.barBg, transition: "background 0.3s ease" }}>
-              <button
-                disabled={!canPublish || publishing}
-                onClick={handlePublish}
-                style={{
-                  flex:        1,
-                  background:  canPublish ? "var(--permanent-gold)" : ed.publishDisabledBg,
-                  color:       canPublish ? "white"                 : ed.publishDisabledColor,
-                  border:      "none",
-                  borderRadius:"8px",
-                  padding:     "13px",
-                  cursor:      canPublish ? "pointer" : "not-allowed",
-                  fontFamily:  "'Inter', sans-serif",
-                  fontSize:    "14px",
-                  fontWeight:  600,
-                  transition:  "all 0.2s",
-                }}>
+              <button disabled={!canPublish || publishing} onClick={handlePublish}
+                style={{ flex: 1, background: canPublish ? "var(--permanent-gold)" : ed.publishDisabledBg, color: canPublish ? "white" : ed.publishDisabledColor, border: "none", borderRadius: "8px", padding: "13px", cursor: canPublish ? "pointer" : "not-allowed", fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 600, transition: "all 0.2s" }}>
                 {publishing ? "Publishing your experience..." : "Publish your experience"}
               </button>
-              <button
-                onClick={() => { saveDraftLocally({ answers, title, body, pullQuote }); handleClose(); }}
+              <button onClick={() => { saveDraftLocally({ answers, title, body, pullQuote }); handleClose(); }}
                 style={{ background: "transparent", border: `1px solid ${ed.saveBorder}`, borderRadius: "8px", padding: "13px 16px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: ed.saveColor, whiteSpace: "nowrap" }}>
                 Save for later
               </button>
@@ -641,8 +649,7 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
           <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.5)", marginBottom: "32px", lineHeight: 1.6, maxWidth: "320px" }}>
             It is now part of Annie. Others can read it, carry it forward, and respond to it.
           </p>
-          <button
-            onClick={handleClose}
+          <button onClick={handleSuccessClose}
             style={{ background: "var(--permanent-gold)", border: "none", borderRadius: "10px", padding: "13px 32px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 600, color: "white" }}>
             Back to Annie
           </button>
@@ -650,10 +657,7 @@ export default function ShareFlow({ open, user, onClose, onSignIn, initialType }
       )}
 
       <style>{`
-        @keyframes shareFlowIn {
-          from { opacity: 0; transform: translateY(12px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes shareFlowIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
         .annie-editor-title::placeholder { color: ${ed.placeholderTitle}; }
         .annie-editor-body::placeholder  { color: ${ed.placeholderBody};  }
         .annie-editor-name::placeholder  { color: ${ed.placeholderBody};  }
