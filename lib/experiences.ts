@@ -67,3 +67,38 @@ export async function saveDraftToSupabase(exp: NewExperience & { id?: string }):
   if (error) return { ok: false, error: error.message };
   return { ok: true, id: data.id };
 }
+
+// ─── Feed queries ─────────────────────────────────────────────────────────────
+
+export type FeedExperience = {
+  id:                   string;
+  category:             string;
+  title:                string;
+  content:              string;
+  pull_quote:           string | null;
+  is_anonymous:         boolean;
+  is_live:              boolean;
+  is_historical:        boolean;
+  carried_forward_count: number;
+  response_count:       number;
+  read_time_minutes:    number;
+  created_at:           string;
+  profile_id:           string;
+};
+
+export async function getFeedExperiences(category?: string): Promise<FeedExperience[]> {
+  let query = supabase
+    .from("experiences")
+    .select("*")
+    .eq("published", true)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (category && category !== "individual") {
+    query = query.eq("category", category);
+  }
+
+  const { data, error } = await query;
+  if (error) return [];
+  return data as FeedExperience[];
+}

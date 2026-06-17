@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { AnnieUser, getCurrentUser, onAuthChange, signInWithGoogle, signOut } from "../lib/auth";
 import { FEED_CATEGORIES } from "../lib/categories";
+import { getFeedExperiences, FeedExperience } from "../lib/experiences";
 import Nav from "../components/Nav";
 import SlideMenu from "../components/SlideMenu";
 import ShareFlow from "../components/ShareFlow";
@@ -19,6 +20,8 @@ export default function Home() {
   const [menuOpen, setMenuOpen]             = useState(false);
   const [shareOpen, setShareOpen]           = useState(false);
   const [activeCategory, setActiveCategory] = useState("individual");
+  const [experiences, setExperiences]       = useState<FeedExperience[]>([]);
+  const [feedLoading, setFeedLoading]       = useState(true);
 
   useEffect(() => {
     setMounted(true);
@@ -26,6 +29,14 @@ export default function Home() {
     const unsub = onAuthChange(setUser);
     return unsub;
   }, []);
+
+  useEffect(() => {
+    setFeedLoading(true);
+    getFeedExperiences(activeCategory).then((data) => {
+      setExperiences(data);
+      setFeedLoading(false);
+    });
+  }, [activeCategory]);
 
   // Slide menu scroll lock
   useEffect(() => {
@@ -148,21 +159,52 @@ export default function Home() {
       {/* FEED */}
       <main style={{ maxWidth: "800px", margin: "0 auto", padding: "36px 16px" }}>
         <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "2.5px", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "20px", paddingBottom: "12px", borderBottom: "1px solid var(--border-default)" }}>
-          Featured experience
+          {feedLoading ? "Loading..." : experiences.length === 0 ? "No experiences yet" : `${experiences.length} experience${experiences.length === 1 ? "" : "s"}`}
         </p>
-        <ExperienceCard
-          pullQuote="I left Rwanda at seventeen with one bag and a borrowed phone number. Twenty years later I walked back in as someone who helped rebuild it."
-          category="Individual"
-          tag="Migration"
-          authorInitial="A"
-          authorName="Amara K."
-          authorNote="Shared anonymously. Kigali, Rwanda."
-          title="I came back to the country that broke me. Here is what I found."
-          excerpt="The road from the airport looked the same. The trees I remembered were taller. The checkpoint was gone. I had rehearsed this moment for years and none of it prepared me for how ordinary it all felt."
-          carriedCount="4.2k"
-          responseCount="312"
-          readTime="8"
-        />
+
+        {feedLoading && (
+          <div style={{ textAlign: "center", padding: "60px 0", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>
+            Loading experiences...
+          </div>
+        )}
+
+        {!feedLoading && experiences.length === 0 && (
+          <div style={{ textAlign: "center", padding: "60px 0" }}>
+            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "22px", fontWeight: 300, color: "var(--text-primary)", marginBottom: "10px" }}>
+              Nothing here yet.
+            </p>
+            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)", marginBottom: "24px" }}>
+              Be the first to share an experience in this category.
+            </p>
+            <button
+              onClick={handleShare}
+              style={{ background: "var(--permanent-gold)", color: "white", border: "none", padding: "12px 24px", borderRadius: "var(--radius-sm)", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+              Share an experience
+            </button>
+          </div>
+        )}
+
+        {!feedLoading && experiences.map((exp) => {
+          const excerpt = exp.content.slice(0, 180).trim() + (exp.content.length > 180 ? "..." : "");
+          const initial = exp.is_anonymous ? "A" : "?";
+          const name    = exp.is_anonymous ? "Anonymous" : "Someone";
+          return (
+            <div key={exp.id} style={{ marginBottom: "24px" }}>
+              <ExperienceCard
+                pullQuote={exp.pull_quote || excerpt}
+                category={exp.category.charAt(0).toUpperCase() + exp.category.slice(1)}
+                authorInitial={initial}
+                authorName={name}
+                title={exp.title}
+                excerpt={excerpt}
+                carriedCount={exp.carried_forward_count}
+                responseCount={exp.response_count}
+                readTime={exp.read_time_minutes}
+                isLive={exp.is_live}
+              />
+            </div>
+          );
+        })}
       </main>
 
       {/* SHARE FLOW OVERLAY — no page navigation, instant */}
