@@ -69,7 +69,6 @@ function VideoArea({ url }: { url?: string }) {
             <polygon points="5 3 19 12 5 21 5 3"/>
           </svg>
         </div>
-        <ComingSoon />
       </div>
       {source && (
         <div style={{ position: "absolute", bottom: "10px", right: "10px", background: "rgba(15,14,12,0.8)", borderRadius: "4px", padding: "3px 8px", fontFamily: "'Inter', sans-serif", fontSize: "10px", color: "rgba(246,241,234,0.5)" }}>
