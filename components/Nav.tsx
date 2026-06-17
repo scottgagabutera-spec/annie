@@ -22,6 +22,7 @@ type Props = {
 
 export default function Nav({ user, theme, mounted, onMenuOpen, onLogoClick, onSignIn, onSignOut, onShare, onToggleTheme }: Props) {
   const [visible, setVisible] = useState(true);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const lastScrollY = useRef(0);
   const ticking = useRef(false);
 
@@ -111,16 +112,40 @@ export default function Nav({ user, theme, mounted, onMenuOpen, onLogoClick, onS
         </button>
 
         {user ? (
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <Link href="/profile" style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setAccountMenuOpen((v) => !v)}
+              style={{ display: "flex", alignItems: "center", gap: "8px", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
               <Avatar user={user} size={30} />
               <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 500, color: "rgba(246,241,234,0.75)" }}>
                 {user.name.split(" ")[0]}
               </span>
-            </Link>
-            <span onClick={onSignOut} style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "rgba(246,241,234,0.35)", cursor: "pointer" }}>
-              Sign out
-            </span>
+            </button>
+
+            {accountMenuOpen && (
+              <>
+                <div onClick={() => setAccountMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 150 }} />
+                <div style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, background: "#16140f", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "var(--radius-sm)", minWidth: "180px", overflow: "hidden", zIndex: 160, boxShadow: "0 12px 28px rgba(0,0,0,0.4)" }}>
+                  <Link
+                    href="/profile"
+                    onClick={() => setAccountMenuOpen(false)}
+                    style={{ display: "block", padding: "12px 16px", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.85)", textDecoration: "none" }}>
+                    My experiences
+                  </Link>
+                  <Link
+                    href="/settings"
+                    onClick={() => setAccountMenuOpen(false)}
+                    style={{ display: "block", padding: "12px 16px", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.85)", textDecoration: "none", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                    Settings
+                  </Link>
+                  <button
+                    onClick={() => { setAccountMenuOpen(false); onSignOut(); }}
+                    style={{ display: "block", width: "100%", textAlign: "left", padding: "12px 16px", background: "transparent", border: "none", borderTop: "1px solid rgba(255,255,255,0.06)", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.5)" }}>
+                    Sign out
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <span onClick={onSignIn} style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 500, color: "rgba(246,241,234,0.55)", cursor: "pointer" }}>
