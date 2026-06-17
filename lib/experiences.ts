@@ -118,6 +118,18 @@ export async function getExperienceById(id: string): Promise<FeedExperience | nu
   return data as FeedExperience;
 }
 
+export async function getExperiencesByProfile(profileId: string): Promise<FeedExperience[]> {
+  const { data, error } = await supabase
+    .from("experiences")
+    .select("*")
+    .eq("profile_id", profileId)
+    .eq("published", true)
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+  return data as FeedExperience[];
+}
+
 export async function carryForward(id: string): Promise<boolean> {
   const { error } = await supabase.rpc("increment_carried_forward", { experience_id: id });
   return !error;

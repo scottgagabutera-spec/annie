@@ -4,6 +4,7 @@
 // Giants Way standard: never jumps, never pulls, always intentional.
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { AnnieUser } from "../lib/auth";
 import Avatar from "./Avatar";
 
@@ -111,10 +112,12 @@ export default function Nav({ user, theme, mounted, onMenuOpen, onLogoClick, onS
 
         {user ? (
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <Avatar user={user} size={30} />
-            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 500, color: "rgba(246,241,234,0.75)" }}>
-              {user.name.split(" ")[0]}
-            </span>
+            <Link href="/profile" style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
+              <Avatar user={user} size={30} />
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 500, color: "rgba(246,241,234,0.75)" }}>
+                {user.name.split(" ")[0]}
+              </span>
+            </Link>
             <span onClick={onSignOut} style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "rgba(246,241,234,0.35)", cursor: "pointer" }}>
               Sign out
             </span>
@@ -132,7 +135,11 @@ export default function Nav({ user, theme, mounted, onMenuOpen, onLogoClick, onS
 
       {/* Mobile nav */}
       <div className="mobile-nav" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        {user && <Avatar user={user} size={28} />}
+        {user && (
+          <Link href="/profile" aria-label="Your profile" style={{ display: "flex", alignItems: "center" }}>
+            <Avatar user={user} size={28} />
+          </Link>
+        )}
         <button onClick={onMenuOpen} aria-label="Open menu" style={{ background: "transparent", border: "none", cursor: "pointer", padding: "6px", display: "flex", alignItems: "center" }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--permanent-parchment)" strokeWidth="1.6" strokeLinecap="round">
             <line x1="3" y1="6" x2="21" y2="6"/>
