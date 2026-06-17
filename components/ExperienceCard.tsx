@@ -35,27 +35,6 @@ type Props = {
   isPlus?:       boolean;     // viewer has Annie Plus
 };
 
-// Coming soon badge shown on gated features
-function ComingSoon() {
-  return (
-    <span style={{
-      fontFamily:      "'Inter', sans-serif",
-      fontSize:        "9px",
-      fontWeight:      600,
-      letterSpacing:   "1.5px",
-      textTransform:   "uppercase",
-      color:           "var(--permanent-gold)",
-      background:      "rgba(191,155,78,0.1)",
-      border:          "1px solid rgba(191,155,78,0.25)",
-      borderRadius:    "4px",
-      padding:         "2px 6px",
-      whiteSpace:      "nowrap" as const,
-    }}>
-      Soon
-    </span>
-  );
-}
-
 // Image area — shown when mediaType is "image"
 function ImageArea({ url, count }: { url?: string; count?: number }) {
   return (
@@ -175,35 +154,6 @@ export default function ExperienceCard({
             {excerpt}
           </p>
         )}
-
-        {/* Feature row — coming soon items */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px", flexWrap: "wrap" as const }}>
-          {/* Voice note */}
-          <div style={{ display: "flex", alignItems: "center", gap: "5px", padding: "4px 10px", background: "rgba(0,0,0,0.03)", border: "0.5px solid var(--border-default)", borderRadius: "6px" }}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
-            </svg>
-            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", color: "var(--text-muted)" }}>Voice</span>
-            <ComingSoon />
-          </div>
-          {/* Thread */}
-          <div style={{ display: "flex", alignItems: "center", gap: "5px", padding: "4px 10px", background: "rgba(0,0,0,0.03)", border: "0.5px solid var(--border-default)", borderRadius: "6px" }}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
-              <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
-            </svg>
-            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", color: "var(--text-muted)" }}>Thread</span>
-            <ComingSoon />
-          </div>
-          {/* Translation */}
-          <div style={{ display: "flex", alignItems: "center", gap: "5px", padding: "4px 10px", background: "rgba(0,0,0,0.03)", border: "0.5px solid var(--border-default)", borderRadius: "6px" }}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/>
-            </svg>
-            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", color: "var(--text-muted)" }}>Translate</span>
-            <ComingSoon />
-          </div>
-        </div>
 
         {/* Footer */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "14px", borderTop: "1px solid var(--border-default)", flexWrap: "wrap" as const, gap: "8px" }}>
