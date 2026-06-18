@@ -1,12 +1,15 @@
 "use client";
 // components/ShareFlow.tsx
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { assistWriting, AssistMode } from "../lib/ai";
 import { SHARE_TYPES } from "../lib/categories";
 import { getQuestions } from "../lib/questions";
 import { AnnieUser } from "../lib/auth";
-import { publishExperience } from "../lib/experiences";
+import { publishExperience, uploadExperienceImage } from "../lib/experiences";
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 type Step = "who" | "q1" | "q2" | "q3" | "write" | "signin";
 
@@ -210,7 +213,11 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
   const [publishError, setPublishError]       = useState("");
   const [publishedId, setPublishedId]         = useState("");
   const [editorDark, setEditorDark]           = useState(false);
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const [imageFile, setImageFile]             = useState<File | null>(null);
+  const [imagePreview, setImagePreview]       = useState<string | null>(null);
+  const [imageError, setImageError]           = useState("");
+  const bodyRef  = useRef<HTMLTextAreaElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   // On open: if returning from a sign-in redirect with a pending publish,
   // restore the draft exactly and go straight to write. Otherwise start
@@ -231,6 +238,9 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
         setPublishError("");
         setAssistOpen(false);
         setAssistResult("");
+        setImageFile(null);
+        setImagePreview(null);
+        setImageError("");
         return;
       }
     }
@@ -244,6 +254,9 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
     setPublishError("");
     setAssistOpen(false);
     setAssistResult("");
+    setImageFile(null);
+    setImagePreview(null);
+    setImageError("");
     setShowDraftBanner(hasDraft());
   }, [open, resumeDraft]);
 
@@ -359,6 +372,32 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
 
   const applyAssist = () => { setBody(assistResult); setAssistResult(""); setAssistOpen(false); };
 
+  const handleImageSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setImageError("That file type isn't supported. Use a JPG, PNG, or WEBP.");
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setImageError("That image is too large. Keep it under 5MB.");
+      return;
+    }
+
+    setImageError("");
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleRemoveImage = () => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImageFile(null);
+    setImagePreview(null);
+    setImageError("");
+  };
+
   const handlePublish = async () => {
     if (!user) {
       saveDraftLocally({ answers, title, body, pullQuote });
@@ -368,6 +407,17 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
     }
     setPublishing(true);
     setPublishError("");
+
+    let imageUrls: string[] = [];
+    if (imageFile) {
+      const uploadResult = await uploadExperienceImage(imageFile, user.id);
+      if (!uploadResult.ok) {
+        setPublishError("Your photo didn't upload. You can try again, or publish without it.");
+        setPublishing(false);
+        return;
+      }
+      imageUrls = [uploadResult.url];
+    }
 
     const { isAnonymous, name } = resolveDisplayName();
 
@@ -384,6 +434,7 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
       historical_source: undefined,
       published:         true,
       display_name:      isAnonymous ? undefined : name,
+      image_urls:        imageUrls,
     });
 
     if (!result.ok) {
@@ -407,6 +458,10 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
     setTitle("");
     setBody("");
     setPullQuote("");
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImageFile(null);
+    setImagePreview(null);
+    setImageError("");
     onClose();
   };
 
@@ -640,6 +695,53 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
                   </div>
                 )}
 
+                <div style={{ marginTop: "20px" }}>
+                  <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: ed.metaColor, marginBottom: "8px" }}>
+                    A photo (optional)
+                  </p>
+
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleImageSelect}
+                    style={{ display: "none" }}
+                  />
+
+                  {!imagePreview ? (
+                    <button
+                      onClick={() => imageInputRef.current?.click()}
+                      style={{ display: "flex", alignItems: "center", gap: "8px", background: ed.assistBg, border: `1px dashed ${ed.assistBorder}`, borderRadius: "10px", padding: "14px 16px", cursor: "pointer", width: "100%", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: ed.assistText }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                      </svg>
+                      Add a photo to go with this
+                    </button>
+                  ) : (
+                    <div style={{ position: "relative", borderRadius: "10px", overflow: "hidden", border: `1px solid ${ed.assistBorder}` }}>
+                      <img src={imagePreview} alt="" style={{ width: "100%", maxHeight: "260px", objectFit: "cover", display: "block" }} />
+                      <button
+                        onClick={handleRemoveImage}
+                        aria-label="Remove photo"
+                        style={{ position: "absolute", top: "8px", right: "8px", background: "rgba(15,14,12,0.75)", border: "none", borderRadius: "50%", width: "28px", height: "28px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round">
+                          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+
+                  {imageError && (
+                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#bf9b4e", marginTop: "8px" }}>{imageError}</p>
+                  )}
+
+                  {!isPlus && (
+                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: ed.metaColor, marginTop: "8px" }}>
+                      One photo per experience on the free plan.
+                    </p>
+                  )}
+                </div>
+
                 <div style={{ height: "80px" }} />
               </div>
             </div>
@@ -652,7 +754,7 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
             <div style={{ borderTop: `1px solid ${ed.barBorder}`, padding: "12px 20px", display: "flex", gap: "10px", alignItems: "center", flexShrink: 0, background: ed.barBg, transition: "background 0.3s ease" }}>
               <button disabled={!canPublish || publishing} onClick={handlePublish}
                 style={{ flex: 1, background: canPublish ? "var(--permanent-gold)" : ed.publishDisabledBg, color: canPublish ? "white" : ed.publishDisabledColor, border: "none", borderRadius: "8px", padding: "13px", cursor: canPublish ? "pointer" : "not-allowed", fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 600, transition: "all 0.2s" }}>
-                {publishing ? "Publishing your experience..." : "Publish your experience"}
+                {publishing ? (imageFile ? "Uploading your photo..." : "Publishing your experience...") : "Publish your experience"}
               </button>
               <button onClick={() => { saveDraftLocally({ answers, title, body, pullQuote }); handleClose(); }}
                 style={{ background: "transparent", border: `1px solid ${ed.saveBorder}`, borderRadius: "8px", padding: "13px 16px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: ed.saveColor, whiteSpace: "nowrap" }}>

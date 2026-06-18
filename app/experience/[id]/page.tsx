@@ -107,6 +107,17 @@ export default function ExperiencePage() {
         </div>
       </div>
 
+      {/* Lead photo, if there is one — same position relative to the quote as on the card */}
+      {exp.image_urls?.[0] && (
+        <div style={{ maxWidth: "680px", margin: "0 auto" }}>
+          <img
+            src={exp.image_urls[0]}
+            alt=""
+            style={{ width: "100%", maxHeight: "420px", objectFit: "cover", display: "block" }}
+          />
+        </div>
+      )}
+
       {/* Body — switches to the readable surface for the actual writing */}
       <div style={{ background: "var(--surface-card)", padding: "36px 24px 28px", maxWidth: "680px", margin: "0 auto", borderRadius: "12px 12px 0 0" }}>
         <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(26px, 5vw, 34px)", fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.25, marginBottom: "26px" }}>

@@ -17,6 +17,7 @@ export type NewExperience = {
   historical_source?: string;
   published:         boolean;
   display_name?:     string;
+  image_urls?:       string[];
 };
 
 export type PublishResult =
@@ -38,6 +39,7 @@ export async function publishExperience(exp: NewExperience): Promise<PublishResu
       is_historical:     exp.is_historical,
       historical_source: exp.historical_source || null,
       display_name:      exp.display_name || null,
+      image_urls:        exp.image_urls   || [],
       published:         true,
       carried_forward_count: 0,
       response_count:        0,
@@ -87,6 +89,7 @@ export type FeedExperience = {
   created_at:           string;
   profile_id:           string;
   display_name:         string | null;
+  image_urls:           string[];
 };
 
 export async function getFeedExperiences(category?: string): Promise<FeedExperience[]> {
@@ -133,4 +136,26 @@ export async function getExperiencesByProfile(profileId: string): Promise<FeedEx
 export async function carryForward(id: string): Promise<boolean> {
   const { error } = await supabase.rpc("increment_carried_forward", { experience_id: id });
   return !error;
+}
+
+// ─── Image upload ─────────────────────────────────────────────────────────────
+// One image for free accounts. Plus will allow more once Plus actually exists —
+// no point gating a tier that isn't real yet.
+
+export type ImageUploadResult =
+  | { ok: true;  url: string }
+  | { ok: false; error: string };
+
+export async function uploadExperienceImage(file: File, userId: string): Promise<ImageUploadResult> {
+  const ext  = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+  const { error } = await supabase.storage
+    .from("experience-images")
+    .upload(path, file, { cacheControl: "3600", upsert: false });
+
+  if (error) return { ok: false, error: error.message };
+
+  const { data } = supabase.storage.from("experience-images").getPublicUrl(path);
+  return { ok: true, url: data.publicUrl };
 }

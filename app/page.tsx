@@ -235,6 +235,9 @@ export default function Home() {
                 responseCount={exp.response_count}
                 readTime={exp.read_time_minutes}
                 isLive={exp.is_live}
+                mediaType={exp.image_urls?.length ? "image" : "none"}
+                mediaUrl={exp.image_urls?.[0]}
+                mediaCount={exp.image_urls?.length}
               />
             </Link>
           );
