@@ -90,6 +90,8 @@ export type FeedExperience = {
   profile_id:           string;
   display_name:         string | null;
   image_urls:           string[];
+  is_edited:            boolean;
+  edited_at:            string | null;
 };
 
 export async function getFeedExperiences(category?: string): Promise<FeedExperience[]> {
@@ -136,6 +138,51 @@ export async function getExperiencesByProfile(profileId: string): Promise<FeedEx
 export async function carryForward(id: string): Promise<boolean> {
   const { error } = await supabase.rpc("increment_carried_forward", { experience_id: id });
   return !error;
+}
+
+// ─── Edit & Delete ─────────────────────────────────────────────────────────────
+
+export type EditableFields = {
+  title:      string;
+  content:    string;
+  pull_quote: string | null;
+  image_urls: string[];
+};
+
+export async function updateExperience(id: string, fields: EditableFields): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase
+    .from("experiences")
+    .update({
+      title:             fields.title,
+      content:           fields.content,
+      pull_quote:        fields.pull_quote || null,
+      image_urls:        fields.image_urls,
+      is_edited:         true,
+      edited_at:         new Date().toISOString(),
+      read_time_minutes: Math.max(1, Math.ceil(fields.content.trim().split(/\s+/).length / 200)),
+    })
+    .eq("id", id);
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function deleteExperience(id: string, imageUrls: string[]): Promise<{ ok: boolean; error?: string }> {
+  // Remove images from storage first so they don't linger as orphaned files
+  if (imageUrls.length > 0) {
+    const paths = imageUrls.map((url) => {
+      const parts = url.split("/experience-images/");
+      return parts[1] || "";
+    }).filter(Boolean);
+
+    if (paths.length > 0) {
+      await supabase.storage.from("experience-images").remove(paths);
+    }
+  }
+
+  const { error } = await supabase.from("experiences").delete().eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
 }
 
 // ─── Image upload ─────────────────────────────────────────────────────────────
