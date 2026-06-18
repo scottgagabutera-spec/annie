@@ -47,6 +47,16 @@ export default function ExperiencePage() {
 
   const imageInputRef = useRef<HTMLInputElement>(null);
 
+  // Auto-grow refs — title and body resize to content, no inner scrollbar ever.
+  const editTitleRef = useRef<HTMLTextAreaElement>(null);
+  const editBodyRef  = useRef<HTMLTextAreaElement>(null);
+
+  const autoGrow = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
   useEffect(() => {
     if (!id) return;
     Promise.all([getExperienceById(id), getCurrentUser()]).then(([data, u]) => {
@@ -56,6 +66,16 @@ export default function ExperiencePage() {
       setLoading(false);
     });
   }, [id]);
+
+  // Re-measure both fields the moment the overlay opens, since browsers
+  // report scrollHeight as 0 for elements that were just mounted as display:none.
+  useEffect(() => {
+    if (!editOpen) return;
+    requestAnimationFrame(() => {
+      autoGrow(editTitleRef.current);
+      autoGrow(editBodyRef.current);
+    });
+  }, [editOpen]);
 
   const isOwner = !!(user && exp && user.id === exp.profile_id);
 
@@ -277,28 +297,31 @@ export default function ExperiencePage() {
             </button>
           </div>
 
+          {/* Single outer scroll for the whole panel — nothing inside ever scrolls on its own */}
           <div style={{ flex: 1, overflowY: "auto", padding: "28px 24px" }}>
             <div style={{ maxWidth: "680px", margin: "0 auto" }}>
               {saveError && (
                 <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e07070", marginBottom: "16px" }}>{saveError}</p>
               )}
 
-              {/* Title */}
+              {/* Title — auto-grows, never scrolls internally */}
               <textarea
+                ref={editTitleRef}
                 value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
+                onChange={(e) => { setEditTitle(e.target.value); autoGrow(e.target); }}
                 placeholder="Title"
-                rows={2}
-                style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid rgba(255,255,255,0.1)", outline: "none", resize: "none", fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(22px, 4vw, 28px)", fontWeight: 600, color: "var(--permanent-parchment)", lineHeight: 1.2, marginBottom: "20px", boxSizing: "border-box", padding: "8px 0" }}
+                rows={1}
+                style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid rgba(255,255,255,0.1)", outline: "none", resize: "none", overflow: "hidden", fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(22px, 4vw, 28px)", fontWeight: 600, color: "var(--permanent-parchment)", lineHeight: 1.2, marginBottom: "20px", boxSizing: "border-box", padding: "8px 0" }}
               />
 
-              {/* Body */}
+              {/* Body — auto-grows with content, same pattern as the main ShareFlow editor */}
               <textarea
+                ref={editBodyRef}
                 value={editBody}
-                onChange={(e) => setEditBody(e.target.value)}
+                onChange={(e) => { setEditBody(e.target.value); autoGrow(e.target); }}
                 placeholder="Write your experience here."
-                rows={12}
-                style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "vertical", fontFamily: "'Inter', sans-serif", fontSize: "16px", color: "var(--permanent-parchment)", lineHeight: 1.8, marginBottom: "20px", boxSizing: "border-box", minHeight: "200px" }}
+                rows={1}
+                style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", overflow: "hidden", fontFamily: "'Inter', sans-serif", fontSize: "16px", color: "var(--permanent-parchment)", lineHeight: 1.8, marginBottom: "20px", boxSizing: "border-box", minHeight: "200px" }}
               />
 
               {/* Pull quote */}

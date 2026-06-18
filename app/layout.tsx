@@ -5,8 +5,8 @@ import { ThemeProvider } from "next-themes";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Annie — Every experience worth carrying forward.",
-  description: "Individuals, organizations, nations, and history — all speaking. All being heard.",
+  title: "Annie",
+  description: "Real experiences, written by the people who lived them.",
 };
 
 export default async function RootLayout({
