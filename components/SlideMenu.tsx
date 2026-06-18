@@ -2,6 +2,7 @@
 // components/SlideMenu.tsx
 // Mobile slide-in menu. Receives user + handlers as props — no auth logic inside.
 
+import Link from "next/link";
 import { AnnieUser } from "../lib/auth";
 import Avatar from "./Avatar";
 
@@ -15,16 +16,36 @@ type Props = {
   onSignOut: () => void;
   onShare: () => void;
   onToggleTheme: () => void;
+  onReadExperiences: () => void;
 };
 
 const NAV_LINKS = [
-  { label: "Read experiences", path: "M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" },
-  { label: "My profile",       path: "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" },
-  { label: "Guides",           path: "M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" },
-  { label: "Annie Plus",       path: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" },
+  {
+    label: "Read experiences",
+    type:  "scroll" as const,
+    path:  "M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z",
+  },
+  {
+    label: "My profile",
+    type:  "link" as const,
+    href:  "/profile",
+    path:  "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z",
+  },
+  {
+    label: "Settings",
+    type:  "link" as const,
+    href:  "/settings",
+    path:  "M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z",
+  },
+  {
+    label: "Annie Plus",
+    type:  "link" as const,
+    href:  "/plus",
+    path:  "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",
+  },
 ];
 
-export default function SlideMenu({ open, user, theme, mounted, onClose, onSignIn, onSignOut, onShare, onToggleTheme }: Props) {
+export default function SlideMenu({ open, user, theme, mounted, onClose, onSignIn, onSignOut, onShare, onToggleTheme, onReadExperiences }: Props) {
   return (
     <div style={{
       position:      "fixed",
@@ -52,16 +73,39 @@ export default function SlideMenu({ open, user, theme, mounted, onClose, onSignI
         </button>
       </div>
 
-      {/* Nav links */}
+      {/* Nav links — every item here actually goes somewhere */}
       <div style={{ padding: "4px 12px" }}>
-        {NAV_LINKS.map((item) => (
-          <div key={item.label} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "11px 8px", cursor: "pointer" }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(246,241,234,0.5)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              <path d={item.path}/>
-            </svg>
-            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 500, color: "rgba(246,241,234,0.75)" }}>{item.label}</span>
-          </div>
-        ))}
+        {NAV_LINKS.map((item) => {
+          const inner = (
+            <>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(246,241,234,0.5)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d={item.path}/>
+              </svg>
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 500, color: "rgba(246,241,234,0.75)" }}>{item.label}</span>
+            </>
+          );
+
+          if (item.type === "link") {
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={onClose}
+                style={{ display: "flex", alignItems: "center", gap: "12px", padding: "11px 8px", cursor: "pointer", textDecoration: "none" }}>
+                {inner}
+              </Link>
+            );
+          }
+
+          return (
+            <div
+              key={item.label}
+              onClick={() => { onReadExperiences(); onClose(); }}
+              style={{ display: "flex", alignItems: "center", gap: "12px", padding: "11px 8px", cursor: "pointer" }}>
+              {inner}
+            </div>
+          );
+        })}
       </div>
 
       <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", margin: "4px 20px" }} />

@@ -84,6 +84,10 @@ export default function Home() {
     setActiveCategory("individual");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+  const handleReadExperiences = () => {
+    setMenuOpen(false);
+    document.getElementById("feed")?.scrollIntoView({ behavior: "smooth" });
+  };
 
   return (
     <>
@@ -105,6 +109,7 @@ export default function Home() {
         onSignOut={handleSignOut}
         onShare={handleShare}
         onToggleTheme={handleToggleTheme}
+        onReadExperiences={handleReadExperiences}
       />
 
       <Nav
@@ -170,7 +175,9 @@ export default function Home() {
             style={{ background: "var(--permanent-gold)", color: "white", border: "none", padding: "14px 30px", borderRadius: "var(--radius-sm)", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, cursor: "pointer", width: "100%" }}>
             Share an experience
           </button>
-          <button style={{ background: "transparent", color: "rgba(246,241,234,0.7)", border: "1px solid rgba(255,255,255,0.18)", padding: "14px 30px", borderRadius: "var(--radius-sm)", fontFamily: "'Inter', sans-serif", fontSize: "13px", cursor: "pointer", width: "100%" }}>
+          <button
+            onClick={handleReadExperiences}
+            style={{ background: "transparent", color: "rgba(246,241,234,0.7)", border: "1px solid rgba(255,255,255,0.18)", padding: "14px 30px", borderRadius: "var(--radius-sm)", fontFamily: "'Inter', sans-serif", fontSize: "13px", cursor: "pointer", width: "100%" }}>
             Read experiences
           </button>
         </div>
@@ -181,7 +188,7 @@ export default function Home() {
       </header>
 
       {/* FEED */}
-      <main style={{ maxWidth: "800px", margin: "0 auto", padding: "36px 16px" }}>
+      <main id="feed" style={{ maxWidth: "800px", margin: "0 auto", padding: "36px 16px" }}>
         <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "2.5px", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "20px", paddingBottom: "12px", borderBottom: "1px solid var(--border-default)" }}>
           {feedLoading ? "Loading..." : experiences.length === 0 ? "No experiences yet" : `${experiences.length} experience${experiences.length === 1 ? "" : "s"}`}
         </p>
