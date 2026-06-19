@@ -126,16 +126,57 @@ export async function getExperienceById(id: string): Promise<FeedExperience | nu
   return data as FeedExperience;
 }
 
-export async function getExperiencesByProfile(profileId: string): Promise<FeedExperience[]> {
-  const { data, error } = await supabase
+// includeAnonymous defaults to false because this function is shared by both
+// the owner's own profile and everyone else's public profile. An anonymous
+// experience must never appear next to someone's real name and photo on the
+// public page — that's the entire point of the anonymous toggle. Only the
+// owner's own profile view passes includeAnonymous=true, so a person can see
+// the complete list of everything they've written, including what they
+// chose to post anonymously.
+export async function getExperiencesByProfile(
+  profileId: string,
+  includeAnonymous = false
+): Promise<FeedExperience[]> {
+  let query = supabase
     .from("experiences")
     .select("*")
     .eq("profile_id", profileId)
     .eq("published", true)
     .order("created_at", { ascending: false });
 
+  if (!includeAnonymous) {
+    query = query.eq("is_anonymous", false);
+  }
+
+  const { data, error } = await query;
   if (error) return [];
   return data as FeedExperience[];
+}
+
+// ─── Public profiles ───────────────────────────────────────────────────────
+// Used by /profile/[id] — guests and other signed-in users viewing someone
+// else. Distinct from lib/auth.ts's AnnieUser, which only ever represents
+// the currently signed-in person.
+
+export type PublicProfile = {
+  id:                     string;
+  full_name:              string | null;
+  avatar_url:             string | null;
+  bio:                    string | null;
+  is_verified:            boolean;
+  is_guide:               boolean;
+  carried_forward_count:  number;
+};
+
+export async function getProfileById(profileId: string): Promise<PublicProfile | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, avatar_url, bio, is_verified, is_guide, carried_forward_count")
+    .eq("id", profileId)
+    .single();
+
+  if (error || !data) return null;
+  return data as PublicProfile;
 }
 
 export async function carryForward(id: string): Promise<boolean> {

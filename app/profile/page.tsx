@@ -1,15 +1,30 @@
 "use client";
 // app/profile/page.tsx
-// A signed-in person's own experiences, all in one place.
-// Public profile pages for other people are a separate, later piece of scope.
-// All 10 statements applied. Zero hardcoded colors.
+// A signed-in person's own experiences — a table of contents, not a feed.
+// Public profile pages for other people live at /profile/[id].
+// Mobile First, Premium, Modern, Giants Way, User Friendly, Logical,
+// Long Term, Unique, Consistent. Zero hardcoded colors.
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnnieUser, getCurrentUser, onAuthChange, signInWithGoogle } from "../../lib/auth";
 import { getExperiencesByProfile, FeedExperience } from "../../lib/experiences";
-import ExperienceCard from "../../components/ExperienceCard";
 import Avatar from "../../components/Avatar";
+
+const CATEGORY_LABELS: Record<string, string> = {
+  individual: "Individual",
+  organization: "Organization",
+  nation: "Nation",
+  historical: "Historical",
+};
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 export default function ProfilePage() {
   const [user, setUser]               = useState<AnnieUser | null>(null);
@@ -19,7 +34,7 @@ export default function ProfilePage() {
 
   const loadExperiences = async (profileId: string) => {
     setLoading(true);
-    const data = await getExperiencesByProfile(profileId);
+    const data = await getExperiencesByProfile(profileId, true);
     setExperiences(data);
     setLoading(false);
   };
@@ -98,7 +113,17 @@ export default function ProfilePage() {
         }}>
           Annie<span style={{ color: "var(--permanent-gold)" }}>.</span>
         </Link>
-        <div style={{ width: "30px" }} />
+        <Link href="/settings" aria-label="Settings" style={{
+          background: "transparent", border: "none", cursor: "pointer",
+          padding: "6px", display: "flex", alignItems: "center",
+        }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="var(--text-primary)" strokeWidth="1.6"
+            strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </Link>
       </div>
 
       {/* ── PROFILE HEADER ── */}
@@ -126,11 +151,10 @@ export default function ProfilePage() {
 
       {/* ── EXPERIENCE LIST ── */}
       <div style={{
-        background: "var(--surface-card)",
         borderTop: "1px solid var(--border-default)",
-        minHeight: "40vh", padding: "8px 16px 60px",
+        minHeight: "40vh", padding: "8px 24px 60px",
       }}>
-        <div style={{ maxWidth: "680px", margin: "0 auto", paddingTop: "24px" }}>
+        <div style={{ maxWidth: "680px", margin: "0 auto" }}>
 
           {loading && (
             <div style={{ textAlign: "center", padding: "60px 0", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>
@@ -152,31 +176,57 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {!loading && experiences.map((exp) => {
-            const excerpt    = exp.content.slice(0, 180).trim() + (exp.content.length > 180 ? "..." : "");
-            const name       = exp.is_anonymous ? "Anonymous" : (exp.display_name || user.name);
-            const initial    = exp.is_anonymous ? "A" : (name.charAt(0).toUpperCase() || "?");
-            const hasPhotos  = !!exp.image_urls?.length;
+          {!loading && experiences.map((exp, i) => {
+            const isAnon = exp.is_anonymous;
             return (
               <Link
                 key={exp.id}
                 href={`/experience/${exp.id}`}
-                style={{ textDecoration: "none", color: "inherit", display: "block", marginBottom: "24px" }}>
-                <ExperienceCard
-                  pullQuote={exp.pull_quote || excerpt}
-                  category={exp.category.charAt(0).toUpperCase() + exp.category.slice(1)}
-                  authorInitial={initial}
-                  authorName={name}
-                  title={exp.title}
-                  excerpt={excerpt}
-                  carriedCount={exp.carried_forward_count}
-                  responseCount={exp.response_count}
-                  readTime={exp.read_time_minutes}
-                  isLive={exp.is_live}
-                  mediaType={hasPhotos ? "image" : (exp.video_url ? "video" : "none")}
-                  mediaUrl={hasPhotos ? exp.image_urls[0] : (exp.video_url || undefined)}
-                  imageUrls={exp.image_urls}
-                />
+                style={{
+                  textDecoration: "none", color: "inherit", display: "block",
+                  padding: "18px 0",
+                  borderTop: i === 0 ? "none" : "1px solid var(--border-default)",
+                }}>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "12px", marginBottom: "6px" }}>
+                  <span style={{
+                    fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 600,
+                    letterSpacing: "0.04em", textTransform: "uppercase",
+                    color: "var(--permanent-gold)",
+                  }}>
+                    {CATEGORY_LABELS[exp.category] || exp.category}
+                  </span>
+                  {exp.is_live && (
+                    <span style={{
+                      fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700,
+                      letterSpacing: "0.04em", textTransform: "uppercase",
+                      color: "var(--permanent-live)",
+                    }}>
+                      ● Live
+                    </span>
+                  )}
+                </div>
+                <p style={{
+                  fontFamily: "'Cormorant Garamond', serif", fontSize: "19px",
+                  fontWeight: 600, color: "var(--text-primary)", margin: "0 0 6px",
+                  lineHeight: 1.3,
+                }}>
+                  {exp.title}
+                  {isAnon && (
+                    <span style={{
+                      fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 400,
+                      color: "var(--text-muted)", marginLeft: "8px",
+                    }}>
+                      (posted anonymously)
+                    </span>
+                  )}
+                </p>
+                <p style={{
+                  fontFamily: "'Inter', sans-serif", fontSize: "12px",
+                  color: "var(--text-muted)", margin: 0,
+                }}>
+                  {formatDate(exp.created_at)} · {exp.read_time_minutes} min read
+                  {exp.carried_forward_count > 0 && ` · carried forward ${exp.carried_forward_count}×`}
+                </p>
               </Link>
             );
           })}
