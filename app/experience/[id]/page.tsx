@@ -386,17 +386,31 @@ export default function ExperiencePage() {
 
         {/* Author + category */}
         <div style={{ padding: "28px 24px 0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{ width: "38px", height: "38px", borderRadius: "50%", background: "var(--gold-soft)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Cormorant Garamond', serif", fontSize: "16px", fontWeight: 600, color: "var(--permanent-gold)", flexShrink: 0 }}>
-              {initial}
+          {exp.is_anonymous ? (
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{ width: "38px", height: "38px", borderRadius: "50%", background: "var(--gold-soft)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Cormorant Garamond', serif", fontSize: "16px", fontWeight: 600, color: "var(--permanent-gold)", flexShrink: 0 }}>
+                {initial}
+              </div>
+              <div>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>{name}</p>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)", margin: "2px 0 0" }}>
+                  {exp.read_time_minutes} min read{exp.is_edited ? " · edited" : ""}
+                </p>
+              </div>
             </div>
-            <div>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>{name}</p>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)", margin: "2px 0 0" }}>
-                {exp.read_time_minutes} min read{exp.is_edited ? " · edited" : ""}
-              </p>
-            </div>
-          </div>
+          ) : (
+            <Link href={`/profile/${exp.profile_id}`} style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
+              <div style={{ width: "38px", height: "38px", borderRadius: "50%", background: "var(--gold-soft)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Cormorant Garamond', serif", fontSize: "16px", fontWeight: 600, color: "var(--permanent-gold)", flexShrink: 0 }}>
+                {initial}
+              </div>
+              <div>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>{name}</p>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)", margin: "2px 0 0" }}>
+                  {exp.read_time_minutes} min read{exp.is_edited ? " · edited" : ""}
+                </p>
+              </div>
+            </Link>
+          )}
           <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 600, letterSpacing: "1.5px", textTransform: "uppercase", color: "var(--permanent-gold)", background: "var(--gold-soft)", borderRadius: "4px", padding: "3px 8px", whiteSpace: "nowrap", flexShrink: 0 }}>
             {formatCategory(exp.category)}
           </span>
