@@ -6,7 +6,7 @@ import { assistWriting, AssistMode } from "../lib/ai";
 import { SHARE_TYPES } from "../lib/categories";
 import { getQuestions } from "../lib/questions";
 import { AnnieUser } from "../lib/auth";
-import { publishExperience, uploadExperienceImage } from "../lib/experiences";
+import { publishExperience, uploadExperienceImage, parseVideoUrl, FREE_PHOTO_LIMIT } from "../lib/experiences";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -184,6 +184,32 @@ function SignInGate({ onSignIn, onBack }: { onSignIn: () => void; onBack: () => 
   );
 }
 
+// ─── "Coming soon" disabled control ──────────────────────────────────────────
+// Reusable across the icon row. Looks like a real button, not greyed-out
+// decoration — the point is it should read as "arriving," not "broken."
+// Tap/hover surfaces a short plain label, no sentence, no explaining itself.
+
+function ComingSoonButton({ icon, label, edTone }: { icon: React.ReactNode; label: string; edTone: { iconStroke: string; chipBorder: string; chipColor: string } }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div style={{ position: "relative", display: "inline-flex" }}>
+      <button
+        onClick={() => setShow((s) => !s)}
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        style={{ display: "flex", alignItems: "center", gap: "7px", background: "rgba(255,255,255,0.04)", border: `1px solid ${edTone.chipBorder}`, borderRadius: "8px", padding: "10px 14px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: edTone.chipColor }}>
+        {icon}
+        {label}
+      </button>
+      {show && (
+        <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#1a1814", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "6px", padding: "6px 10px", fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "rgba(246,241,234,0.7)", whiteSpace: "nowrap", zIndex: 10 }}>
+          Coming soon
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main ShareFlow ───────────────────────────────────────────────────────────
 
 type Props = {
@@ -213,11 +239,19 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
   const [publishError, setPublishError]       = useState("");
   const [publishedId, setPublishedId]         = useState("");
   const [editorDark, setEditorDark]           = useState(false);
-  const [imageFile, setImageFile]             = useState<File | null>(null);
-  const [imagePreview, setImagePreview]       = useState<string | null>(null);
-  const [imageError, setImageError]           = useState("");
-  const bodyRef  = useRef<HTMLTextAreaElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // Photos — up to FREE_PHOTO_LIMIT live slots, locked slot beyond that
+  const [imageFiles, setImageFiles]       = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [imageError, setImageError]       = useState("");
+
+  // Video link — live feature, paste a URL
+  const [videoUrl, setVideoUrl]           = useState("");
+  const [videoUrlError, setVideoUrlError] = useState("");
+  const [videoLinkOpen, setVideoLinkOpen] = useState(false);
+
+  const bodyRef        = useRef<HTMLTextAreaElement>(null);
+  const imageInputRef  = useRef<HTMLInputElement>(null);
 
   // On open: if returning from a sign-in redirect with a pending publish,
   // restore the draft exactly and go straight to write. Otherwise start
@@ -238,9 +272,11 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
         setPublishError("");
         setAssistOpen(false);
         setAssistResult("");
-        setImageFile(null);
-        setImagePreview(null);
+        setImageFiles([]);
+        setImagePreviews([]);
         setImageError("");
+        setVideoUrl("");
+        setVideoUrlError("");
         return;
       }
     }
@@ -254,9 +290,11 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
     setPublishError("");
     setAssistOpen(false);
     setAssistResult("");
-    setImageFile(null);
-    setImagePreview(null);
+    setImageFiles([]);
+    setImagePreviews([]);
     setImageError("");
+    setVideoUrl("");
+    setVideoUrlError("");
     setShowDraftBanner(hasDraft());
   }, [open, resumeDraft]);
 
@@ -305,6 +343,12 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
     ta.style.height = "auto";
     ta.style.height = ta.scrollHeight + "px";
   }, [body]);
+
+  // Clean up preview object URLs on unmount
+  useEffect(() => {
+    return () => { imagePreviews.forEach((url) => URL.revokeObjectURL(url)); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const answer = (field: keyof Answers, value: string) =>
     setAnswers((a) => ({ ...a, [field]: value }));
@@ -377,6 +421,8 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
     e.target.value = "";
     if (!file) return;
 
+    if (imageFiles.length >= FREE_PHOTO_LIMIT) return;
+
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
       setImageError("That file type isn't supported. Use a JPG, PNG, or WEBP.");
       return;
@@ -387,16 +433,27 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
     }
 
     setImageError("");
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    setImageFiles((prev) => [...prev, file]);
+    setImagePreviews((prev) => [...prev, URL.createObjectURL(file)]);
   };
 
-  const handleRemoveImage = () => {
-    if (imagePreview) URL.revokeObjectURL(imagePreview);
-    setImageFile(null);
-    setImagePreview(null);
+  const handleRemoveImage = (index: number) => {
+    setImagePreviews((prev) => {
+      URL.revokeObjectURL(prev[index]);
+      return prev.filter((_, i) => i !== index);
+    });
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
     setImageError("");
   };
+
+  const handleVideoUrlChange = (value: string) => {
+    setVideoUrl(value);
+    if (!value.trim()) { setVideoUrlError(""); return; }
+    const parsed = parseVideoUrl(value);
+    setVideoUrlError(parsed ? "" : "Paste a YouTube or Vimeo link.");
+  };
+
+  const parsedVideo = videoUrl.trim() ? parseVideoUrl(videoUrl) : null;
 
   const handlePublish = async () => {
     if (!user) {
@@ -409,14 +466,16 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
     setPublishError("");
 
     let imageUrls: string[] = [];
-    if (imageFile) {
-      const uploadResult = await uploadExperienceImage(imageFile, user.id);
-      if (!uploadResult.ok) {
-        setPublishError("Your photo didn't upload. You can try again, or publish without it.");
-        setPublishing(false);
-        return;
+    if (imageFiles.length > 0) {
+      for (const file of imageFiles) {
+        const uploadResult = await uploadExperienceImage(file, user.id);
+        if (!uploadResult.ok) {
+          setPublishError("One of your photos didn't upload. You can try again, or publish without it.");
+          setPublishing(false);
+          return;
+        }
+        imageUrls.push(uploadResult.url);
       }
-      imageUrls = [uploadResult.url];
     }
 
     const { isAnonymous, name } = resolveDisplayName();
@@ -435,6 +494,7 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
       published:         true,
       display_name:      isAnonymous ? undefined : name,
       image_urls:        imageUrls,
+      video_url:         parsedVideo ? videoUrl.trim() : undefined,
     });
 
     if (!result.ok) {
@@ -458,14 +518,17 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
     setTitle("");
     setBody("");
     setPullQuote("");
-    if (imagePreview) URL.revokeObjectURL(imagePreview);
-    setImageFile(null);
-    setImagePreview(null);
+    imagePreviews.forEach((url) => URL.revokeObjectURL(url));
+    setImageFiles([]);
+    setImagePreviews([]);
     setImageError("");
+    setVideoUrl("");
+    setVideoUrlError("");
+    setVideoLinkOpen(false);
     onClose();
   };
 
-  const canPublish  = title.trim().length > 0 && wordCount(body) >= 50;
+  const canPublish  = title.trim().length > 0 && wordCount(body) >= 50 && !videoUrlError;
   const assistsLeft = Math.max(0, FREE_DAILY_ASSIST - assistUsedToday);
   const isPlus      = false;
   const whoLabel    = SHARE_TYPES.find((t) => t.key === answers.whoKey)?.label || "";
@@ -695,9 +758,10 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
                   </div>
                 )}
 
+                {/* ── Photos — up to FREE_PHOTO_LIMIT, locked slot beyond that ── */}
                 <div style={{ marginTop: "20px" }}>
                   <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: ed.metaColor, marginBottom: "8px" }}>
-                    A photo (optional)
+                    Photos (optional)
                   </p>
 
                   <input
@@ -708,28 +772,40 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
                     style={{ display: "none" }}
                   />
 
-                  {!imagePreview ? (
-                    <button
-                      onClick={() => imageInputRef.current?.click()}
-                      style={{ display: "flex", alignItems: "center", gap: "8px", background: ed.assistBg, border: `1px dashed ${ed.assistBorder}`, borderRadius: "10px", padding: "14px 16px", cursor: "pointer", width: "100%", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: ed.assistText }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-                      </svg>
-                      Add a photo to go with this
-                    </button>
-                  ) : (
-                    <div style={{ position: "relative", borderRadius: "10px", overflow: "hidden", border: `1px solid ${ed.assistBorder}` }}>
-                      <img src={imagePreview} alt="" style={{ width: "100%", maxHeight: "260px", objectFit: "cover", display: "block" }} />
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px" }}>
+                    {imagePreviews.map((src, i) => (
+                      <div key={i} style={{ position: "relative", aspectRatio: "1", borderRadius: "8px", overflow: "hidden", border: `1px solid ${ed.assistBorder}` }}>
+                        <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                        <button
+                          onClick={() => handleRemoveImage(i)}
+                          aria-label="Remove photo"
+                          style={{ position: "absolute", top: "4px", right: "4px", background: "rgba(15,14,12,0.75)", border: "none", borderRadius: "50%", width: "22px", height: "22px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+
+                    {imagePreviews.length < FREE_PHOTO_LIMIT && (
                       <button
-                        onClick={handleRemoveImage}
-                        aria-label="Remove photo"
-                        style={{ position: "absolute", top: "8px", right: "8px", background: "rgba(15,14,12,0.75)", border: "none", borderRadius: "50%", width: "28px", height: "28px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round">
-                          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        onClick={() => imageInputRef.current?.click()}
+                        style={{ aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center", background: ed.assistBg, border: `1px dashed ${ed.assistBorder}`, borderRadius: "8px", cursor: "pointer" }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={ed.assistText} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
                         </svg>
                       </button>
-                    </div>
-                  )}
+                    )}
+
+                    {imagePreviews.length >= FREE_PHOTO_LIMIT && (
+                      <div style={{ aspectRatio: "1", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", background: "rgba(191,155,78,0.06)", border: `1px solid ${ed.pullBorder}`, borderRadius: "8px" }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--permanent-gold)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+                        </svg>
+                        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "9px", fontWeight: 600, color: "var(--permanent-gold)" }}>Plus</span>
+                      </div>
+                    )}
+                  </div>
 
                   {imageError && (
                     <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#bf9b4e", marginTop: "8px" }}>{imageError}</p>
@@ -737,9 +813,82 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
 
                   {!isPlus && (
                     <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: ed.metaColor, marginTop: "8px" }}>
-                      One photo per experience on the free plan.
+                      Up to {FREE_PHOTO_LIMIT} photos on the free plan.
                     </p>
                   )}
+                </div>
+
+                {/* ── Video link — live feature ── */}
+                <div style={{ marginTop: "20px" }}>
+                  <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: ed.metaColor, marginBottom: "8px" }}>
+                    Video link (optional)
+                  </p>
+
+                  {!videoLinkOpen && !videoUrl ? (
+                    <button
+                      onClick={() => setVideoLinkOpen(true)}
+                      style={{ display: "flex", alignItems: "center", gap: "8px", background: ed.assistBg, border: `1px dashed ${ed.assistBorder}`, borderRadius: "10px", padding: "14px 16px", cursor: "pointer", width: "100%", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: ed.assistText }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M15 10l4.55-2.55A1 1 0 0 1 21 8.36v7.28a1 1 0 0 1-1.45.9L15 14"/>
+                        <rect x="3" y="6" width="12" height="12" rx="2"/>
+                      </svg>
+                      Add a YouTube or Vimeo link
+                    </button>
+                  ) : (
+                    <div>
+                      <input
+                        value={videoUrl}
+                        onChange={(e) => handleVideoUrlChange(e.target.value)}
+                        placeholder="https://youtube.com/watch?v=..."
+                        style={{ width: "100%", background: ed.assistBg, border: `1px solid ${videoUrlError ? "#bf9b4e" : ed.assistBorder}`, borderRadius: "8px", padding: "10px 12px", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: ed.bodyColor, outline: "none", boxSizing: "border-box" }} />
+                      {videoUrlError && (
+                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#bf9b4e", marginTop: "6px" }}>{videoUrlError}</p>
+                      )}
+                      {parsedVideo && (
+                        <div style={{ marginTop: "10px", borderRadius: "8px", overflow: "hidden", border: `1px solid ${ed.assistBorder}`, position: "relative" }}>
+                          {parsedVideo.thumbnailUrl ? (
+                            <img src={parsedVideo.thumbnailUrl} alt="" style={{ width: "100%", maxHeight: "180px", objectFit: "cover", display: "block" }} />
+                          ) : (
+                            <div style={{ height: "100px", background: "#0f0e0c", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "rgba(246,241,234,0.4)" }}>Vimeo video linked</span>
+                            </div>
+                          )}
+                          <button
+                            onClick={() => { setVideoUrl(""); setVideoUrlError(""); setVideoLinkOpen(false); }}
+                            aria-label="Remove video link"
+                            style={{ position: "absolute", top: "8px", right: "8px", background: "rgba(15,14,12,0.75)", border: "none", borderRadius: "50%", width: "26px", height: "26px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round">
+                              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Video upload + voice to text — not yet, honest disabled state ── */}
+                <div style={{ marginTop: "16px", display: "flex", gap: "10px", flexWrap: "wrap" as const }}>
+                  <ComingSoonButton
+                    edTone={ed}
+                    icon={
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M15 10l4.55-2.55A1 1 0 0 1 21 8.36v7.28a1 1 0 0 1-1.45.9L15 14"/>
+                        <rect x="3" y="6" width="12" height="12" rx="2"/>
+                      </svg>
+                    }
+                    label="Upload a video"
+                  />
+                  <ComingSoonButton
+                    edTone={ed}
+                    icon={
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/>
+                      </svg>
+                    }
+                    label="Speak it instead"
+                  />
                 </div>
 
                 <div style={{ height: "80px" }} />
@@ -754,7 +903,7 @@ export default function ShareFlow({ open, user, onClose, onSignIn, onPublished, 
             <div style={{ borderTop: `1px solid ${ed.barBorder}`, padding: "12px 20px", display: "flex", gap: "10px", alignItems: "center", flexShrink: 0, background: ed.barBg, transition: "background 0.3s ease" }}>
               <button disabled={!canPublish || publishing} onClick={handlePublish}
                 style={{ flex: 1, background: canPublish ? "var(--permanent-gold)" : ed.publishDisabledBg, color: canPublish ? "white" : ed.publishDisabledColor, border: "none", borderRadius: "8px", padding: "13px", cursor: canPublish ? "pointer" : "not-allowed", fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 600, transition: "all 0.2s" }}>
-                {publishing ? (imageFile ? "Uploading your photo..." : "Publishing your experience...") : "Publish your experience"}
+                {publishing ? (imageFiles.length > 0 ? "Uploading your photos..." : "Publishing your experience...") : "Publish your experience"}
               </button>
               <button onClick={() => { saveDraftLocally({ answers, title, body, pullQuote }); handleClose(); }}
                 style={{ background: "transparent", border: `1px solid ${ed.saveBorder}`, borderRadius: "8px", padding: "13px 16px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: ed.saveColor, whiteSpace: "nowrap" }}>

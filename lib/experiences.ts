@@ -18,6 +18,7 @@ export type NewExperience = {
   published:         boolean;
   display_name?:     string;
   image_urls?:       string[];
+  video_url?:        string;
 };
 
 export type PublishResult =
@@ -40,6 +41,7 @@ export async function publishExperience(exp: NewExperience): Promise<PublishResu
       historical_source: exp.historical_source || null,
       display_name:      exp.display_name || null,
       image_urls:        exp.image_urls   || [],
+      video_url:         exp.video_url    || null,
       published:         true,
       carried_forward_count: 0,
       response_count:        0,
@@ -90,6 +92,7 @@ export type FeedExperience = {
   profile_id:           string;
   display_name:         string | null;
   image_urls:           string[];
+  video_url:            string | null;
   is_edited:            boolean;
   edited_at:            string | null;
 };
@@ -147,6 +150,7 @@ export type EditableFields = {
   content:    string;
   pull_quote: string | null;
   image_urls: string[];
+  video_url?: string | null;
 };
 
 export async function updateExperience(id: string, fields: EditableFields): Promise<{ ok: boolean; error?: string }> {
@@ -157,6 +161,7 @@ export async function updateExperience(id: string, fields: EditableFields): Prom
       content:           fields.content,
       pull_quote:        fields.pull_quote || null,
       image_urls:        fields.image_urls,
+      video_url:         fields.video_url ?? null,
       is_edited:         true,
       edited_at:         new Date().toISOString(),
       read_time_minutes: Math.max(1, Math.ceil(fields.content.trim().split(/\s+/).length / 200)),
@@ -186,8 +191,10 @@ export async function deleteExperience(id: string, imageUrls: string[]): Promise
 }
 
 // ─── Image upload ─────────────────────────────────────────────────────────────
-// One image for free accounts. Plus will allow more once Plus actually exists —
-// no point gating a tier that isn't real yet.
+// Free accounts get up to 3 photos per experience. Plus will raise this once
+// Plus actually exists — no point gating a tier that isn't real yet.
+
+export const FREE_PHOTO_LIMIT = 3;
 
 export type ImageUploadResult =
   | { ok: true;  url: string }
@@ -205,4 +212,50 @@ export async function uploadExperienceImage(file: File, userId: string): Promise
 
   const { data } = supabase.storage.from("experience-images").getPublicUrl(path);
   return { ok: true, url: data.publicUrl };
+}
+
+// ─── Video link parsing ─────────────────────────────────────────────────────
+// "Video link" (paste a YouTube/Vimeo URL) is a real, working feature — no
+// storage, no transcoding, just an oEmbed-style ID extraction. This is
+// distinct from "video upload," which is not built yet and shown as a
+// disabled, honest "coming soon" control in the editor.
+
+export type ParsedVideo =
+  | { platform: "youtube"; id: string; embedUrl: string; thumbnailUrl: string }
+  | { platform: "vimeo";   id: string; embedUrl: string; thumbnailUrl: string };
+
+export function parseVideoUrl(rawUrl: string): ParsedVideo | null {
+  const url = rawUrl.trim();
+  if (!url) return null;
+
+  const ytPatterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const pattern of ytPatterns) {
+    const match = url.match(pattern);
+    if (match) {
+      const id = match[1];
+      return {
+        platform: "youtube",
+        id,
+        embedUrl: `https://www.youtube.com/embed/${id}`,
+        thumbnailUrl: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+      };
+    }
+  }
+
+  const vimeoMatch = url.match(/vimeo\.com\/(?:.*\/)?(\d+)/);
+  if (vimeoMatch) {
+    const id = vimeoMatch[1];
+    return {
+      platform: "vimeo",
+      id,
+      embedUrl: `https://player.vimeo.com/video/${id}`,
+      // Vimeo thumbnails need an API call to fetch properly; using the
+      // player itself as the visual is the simplest reliable option for now.
+      thumbnailUrl: "",
+    };
+  }
+
+  return null;
 }
