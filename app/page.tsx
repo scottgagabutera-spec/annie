@@ -122,25 +122,22 @@ export default function Home() {
       {/* ── HERO ──────────────────────────────────────────────────────────── */}
       <header style={{
         background: "var(--permanent-ink)",
-        padding: "96px 24px 64px",
+        padding: "72px 24px 52px",
         textAlign: "center",
         position: "relative",
         overflow: "hidden",
       }}>
-
-        {/* Subtle radial glow — warmth behind the headline, not decoration */}
         <div style={{
           position: "absolute",
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -60%)",
           width: "600px",
-          height: "400px",
+          height: "340px",
           background: "radial-gradient(ellipse at center, rgba(191,155,78,0.07) 0%, transparent 70%)",
           pointerEvents: "none",
         }} />
 
-        {/* Eyebrow */}
         <p style={{
           fontFamily: "'Inter', sans-serif",
           fontSize: "9px",
@@ -148,13 +145,12 @@ export default function Home() {
           letterSpacing: "3.5px",
           textTransform: "uppercase",
           color: "var(--permanent-gold)",
-          marginBottom: "20px",
+          marginBottom: "18px",
           opacity: 0.85,
         }}>
           Real experiences. Real people.
         </p>
 
-        {/* Headline — Annie's voice. Editorial, not SaaS. */}
         <h1 style={{
           fontFamily: "'Cormorant Garamond', serif",
           fontSize: "clamp(36px, 7vw, 64px)",
@@ -162,27 +158,25 @@ export default function Home() {
           color: "var(--permanent-parchment)",
           lineHeight: 1.18,
           maxWidth: "680px",
-          margin: "0 auto 24px",
+          margin: "0 auto 20px",
           letterSpacing: "-0.01em",
         }}>
           Something happened.<br />
           <em style={{ fontStyle: "italic", color: "rgba(246,241,234,0.6)" }}>Say it here.</em>
         </h1>
 
-        {/* Supporting line — one sentence, no list */}
         <p style={{
           fontFamily: "'Inter', sans-serif",
           fontSize: "14px",
           color: "rgba(246,241,234,0.42)",
-          maxWidth: "360px",
-          margin: "0 auto 40px",
+          maxWidth: "340px",
+          margin: "0 auto 32px",
           fontWeight: 300,
           lineHeight: 1.7,
         }}>
-          A place where people, companies, nations, and movements share what they lived through — and carry each other forward.
+          People, companies, nations, and movements. Each one with something worth saying.
         </p>
 
-        {/* Single CTA — share is the action. Reading happens by scrolling. */}
         <button
           onClick={handleShare}
           style={{
@@ -200,26 +194,24 @@ export default function Home() {
           Share an experience
         </button>
 
-        {/* Pricing — value statement, not disclaimer */}
         <p style={{
           fontFamily: "'Inter', sans-serif",
           fontSize: "11px",
           color: "rgba(246,241,234,0.22)",
-          marginTop: "16px",
+          marginTop: "14px",
         }}>
-          Free to read and share — Annie Plus from $1.50 / month
+          Reading and sharing are free. Annie Plus starts at $1.50 a month.
         </p>
       </header>
 
       {/* ── FEED ──────────────────────────────────────────────────────────── */}
-      <main id="feed" style={{ maxWidth: "800px", margin: "0 auto", padding: "36px 16px" }}>
+      <main id="feed" style={{ maxWidth: "800px", margin: "0 auto", padding: "32px 16px" }}>
 
-        {/* Category tabs — belong here, above the feed, not in the hero */}
         <div style={{
           overflowX: "auto",
           WebkitOverflowScrolling: "touch" as any,
           scrollbarWidth: "none" as any,
-          marginBottom: "28px",
+          marginBottom: "24px",
           marginLeft: "-16px",
           marginRight: "-16px",
           paddingLeft: "16px",
@@ -269,7 +261,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Feed count */}
         <p style={{
           fontFamily: "'Inter', sans-serif",
           fontSize: "10px",
