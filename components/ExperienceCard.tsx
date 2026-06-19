@@ -24,6 +24,7 @@ type Props = {
   mediaType?:    MediaType;
   mediaUrl?:     string;      // image URL (first photo) or YouTube/Vimeo link
   imageUrls?:    string[];    // full set of photos, for the carousel
+  videoUrl?:     string;      // YouTube/Vimeo link, separate from photos
   mediaCount?:   number;      // deprecated in favor of imageUrls.length, kept for compatibility
 
   // Live state
@@ -41,7 +42,7 @@ type Props = {
 
 // ─── Photo carousel — swipeable on touch, arrows on hover for desktop ──────
 
-function PhotoCarousel({ urls }: { urls: string[] }) {
+function PhotoCarousel({ urls, hasVideo = false }: { urls: string[]; hasVideo?: boolean }) {
   const [index, setIndex] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
@@ -61,6 +62,24 @@ function PhotoCarousel({ urls }: { urls: string[] }) {
     dragDelta.current = 0;
   };
 
+  // Video badge — shown top-left when post also has a video
+  const VideoBadge = () => (
+    <div style={{
+      position: "absolute", top: "10px", left: "10px",
+      background: "rgba(15,14,12,0.72)",
+      border: "0.5px solid rgba(255,255,255,0.15)",
+      borderRadius: "4px", padding: "3px 8px",
+      display: "flex", alignItems: "center", gap: "5px",
+      fontFamily: "'Inter', sans-serif", fontSize: "10px",
+      color: "rgba(246,241,234,0.8)", fontWeight: 500,
+    }}>
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="white" stroke="none">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+      Video
+    </div>
+  );
+
   if (urls.length <= 1) {
     return (
       <div style={{ position: "relative", width: "100%", height: "200px", overflow: "hidden" }}>
@@ -74,6 +93,7 @@ function PhotoCarousel({ urls }: { urls: string[] }) {
             </svg>
           </div>
         )}
+        {hasVideo && <VideoBadge />}
       </div>
     );
   }
@@ -121,9 +141,13 @@ function PhotoCarousel({ urls }: { urls: string[] }) {
         ))}
       </div>
 
+      {/* "1 of N" counter — top right */}
       <div style={{ position: "absolute", top: "10px", right: "10px", background: "rgba(15,14,12,0.72)", border: "0.5px solid rgba(255,255,255,0.15)", borderRadius: "4px", padding: "3px 8px", fontFamily: "'Inter', sans-serif", fontSize: "10px", color: "rgba(246,241,234,0.8)", fontWeight: 500 }}>
         {index + 1} of {urls.length}
       </div>
+
+      {/* Video badge — top left, only when post also has a video */}
+      {hasVideo && <VideoBadge />}
     </div>
   );
 }
@@ -213,7 +237,7 @@ function RespondButton() {
 
 export default function ExperienceCard({
   pullQuote, category, tag, authorInitial, authorName, authorNote,
-  title, excerpt, mediaType = "none", mediaUrl, imageUrls, mediaCount,
+  title, excerpt, mediaType = "none", mediaUrl, imageUrls, videoUrl, mediaCount,
   isLive = false, liveStarted, carriedCount = 0, responseCount = 0,
   readTime, isPlus = false,
 }: Props) {
@@ -225,8 +249,10 @@ export default function ExperienceCard({
       {/* Live bar */}
       {isLive && <LiveBar started={liveStarted} />}
 
-      {/* Media — photo carousel or video */}
-      {mediaType === "image" && photos.length > 0 && <PhotoCarousel urls={photos} />}
+      {/* Media — photo carousel (with optional video badge) or standalone video */}
+      {mediaType === "image" && photos.length > 0 && (
+        <PhotoCarousel urls={photos} hasVideo={!!videoUrl} />
+      )}
       {mediaType === "video" && mediaUrl && <VideoArea url={mediaUrl} />}
 
       {/* Pull quote */}
