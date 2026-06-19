@@ -1,7 +1,5 @@
 "use client";
 // app/page.tsx
-// Clean orchestration — ShareFlow overlay replaces modal + /share page navigation.
-// No page transition, no flash, instant open.
 
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -55,7 +53,6 @@ export default function Home() {
     loadFeed();
   }, [activeCategory]);
 
-  // Slide menu scroll lock
   useEffect(() => {
     const html = document.documentElement;
     if (menuOpen) {
@@ -84,14 +81,9 @@ export default function Home() {
     setActiveCategory("individual");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-  const handleReadExperiences = () => {
-    setMenuOpen(false);
-    document.getElementById("feed")?.scrollIntoView({ behavior: "smooth" });
-  };
 
   return (
     <>
-      {/* Slide menu backdrop */}
       {menuOpen && (
         <div
           onClick={() => setMenuOpen(false)}
@@ -109,7 +101,10 @@ export default function Home() {
         onSignOut={handleSignOut}
         onShare={handleShare}
         onToggleTheme={handleToggleTheme}
-        onReadExperiences={handleReadExperiences}
+        onReadExperiences={() => {
+          setMenuOpen(false);
+          document.getElementById("feed")?.scrollIntoView({ behavior: "smooth" });
+        }}
       />
 
       <Nav
@@ -124,43 +119,149 @@ export default function Home() {
         onToggleTheme={handleToggleTheme}
       />
 
-      {/* HERO */}
-      <header style={{ background: "var(--permanent-ink)", padding: "108px 20px 48px", textAlign: "center" }}>
-        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "9px", fontWeight: 600, letterSpacing: "3px", textTransform: "uppercase", color: "var(--permanent-gold)", marginBottom: "24px" }}>
-          A place for real experiences
+      {/* ── HERO ──────────────────────────────────────────────────────────── */}
+      <header style={{
+        background: "var(--permanent-ink)",
+        padding: "96px 24px 64px",
+        textAlign: "center",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+
+        {/* Subtle radial glow — warmth behind the headline, not decoration */}
+        <div style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -60%)",
+          width: "600px",
+          height: "400px",
+          background: "radial-gradient(ellipse at center, rgba(191,155,78,0.07) 0%, transparent 70%)",
+          pointerEvents: "none",
+        }} />
+
+        {/* Eyebrow */}
+        <p style={{
+          fontFamily: "'Inter', sans-serif",
+          fontSize: "9px",
+          fontWeight: 600,
+          letterSpacing: "3.5px",
+          textTransform: "uppercase",
+          color: "var(--permanent-gold)",
+          marginBottom: "20px",
+          opacity: 0.85,
+        }}>
+          Real experiences. Real people.
         </p>
 
-        <p style={{ fontSize: "15px", color: "rgba(246,241,234,0.52)", maxWidth: "480px", margin: "0 auto 36px", fontWeight: 300, lineHeight: 1.65 }}>
-          People, companies, nations, communities, and movements. Each one with something that happened and something worth saying about it.
+        {/* Headline — Annie's voice. Editorial, not SaaS. */}
+        <h1 style={{
+          fontFamily: "'Cormorant Garamond', serif",
+          fontSize: "clamp(36px, 7vw, 64px)",
+          fontWeight: 300,
+          color: "var(--permanent-parchment)",
+          lineHeight: 1.18,
+          maxWidth: "680px",
+          margin: "0 auto 24px",
+          letterSpacing: "-0.01em",
+        }}>
+          Something happened.<br />
+          <em style={{ fontStyle: "italic", color: "rgba(246,241,234,0.6)" }}>Say it here.</em>
+        </h1>
+
+        {/* Supporting line — one sentence, no list */}
+        <p style={{
+          fontFamily: "'Inter', sans-serif",
+          fontSize: "14px",
+          color: "rgba(246,241,234,0.42)",
+          maxWidth: "360px",
+          margin: "0 auto 40px",
+          fontWeight: 300,
+          lineHeight: 1.7,
+        }}>
+          A place where people, companies, nations, and movements share what they lived through — and carry each other forward.
         </p>
 
-        {/* Category selector */}
-        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" as any, scrollbarWidth: "none" as any, marginBottom: "32px", marginLeft: "-20px", marginRight: "-20px", paddingLeft: "20px", paddingRight: "20px" }}>
-          <div style={{ display: "inline-flex", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "var(--radius-md)", padding: "4px", gap: "2px", whiteSpace: "nowrap" }}>
+        {/* Single CTA — share is the action. Reading happens by scrolling. */}
+        <button
+          onClick={handleShare}
+          style={{
+            background: "var(--permanent-gold)",
+            color: "white",
+            border: "none",
+            padding: "14px 36px",
+            borderRadius: "var(--radius-sm)",
+            fontFamily: "'Inter', sans-serif",
+            fontSize: "13px",
+            fontWeight: 600,
+            cursor: "pointer",
+            letterSpacing: "0.3px",
+          }}>
+          Share an experience
+        </button>
+
+        {/* Pricing — value statement, not disclaimer */}
+        <p style={{
+          fontFamily: "'Inter', sans-serif",
+          fontSize: "11px",
+          color: "rgba(246,241,234,0.22)",
+          marginTop: "16px",
+        }}>
+          Free to read and share — Annie Plus from $1.50 / month
+        </p>
+      </header>
+
+      {/* ── FEED ──────────────────────────────────────────────────────────── */}
+      <main id="feed" style={{ maxWidth: "800px", margin: "0 auto", padding: "36px 16px" }}>
+
+        {/* Category tabs — belong here, above the feed, not in the hero */}
+        <div style={{
+          overflowX: "auto",
+          WebkitOverflowScrolling: "touch" as any,
+          scrollbarWidth: "none" as any,
+          marginBottom: "28px",
+          marginLeft: "-16px",
+          marginRight: "-16px",
+          paddingLeft: "16px",
+          paddingRight: "16px",
+        }}>
+          <div style={{
+            display: "inline-flex",
+            background: "var(--surface-card)",
+            border: "1px solid var(--border-default)",
+            borderRadius: "var(--radius-md)",
+            padding: "4px",
+            gap: "2px",
+            whiteSpace: "nowrap",
+          }}>
             {FEED_CATEGORIES.map((cat) => (
               <button
                 key={cat.key}
                 onClick={() => setActiveCategory(cat.key)}
                 style={{
-                  fontFamily:  "'Inter', sans-serif",
-                  fontSize:    "12px",
-                  fontWeight:  activeCategory === cat.key ? 600 : 500,
-                  padding:     "8px 14px",
+                  fontFamily:   "'Inter', sans-serif",
+                  fontSize:     "12px",
+                  fontWeight:   activeCategory === cat.key ? 600 : 400,
+                  padding:      "8px 14px",
                   borderRadius: "var(--radius-sm)",
-                  cursor:      "pointer",
-                  color:       activeCategory === cat.key ? "white" : "rgba(246,241,234,0.55)",
-                  border:      "none",
-                  background:  activeCategory === cat.key
+                  cursor:       "pointer",
+                  color:        activeCategory === cat.key ? "white" : "var(--text-muted)",
+                  border:       "none",
+                  background:   activeCategory === cat.key
                     ? (cat.isLive ? "var(--permanent-live)" : "var(--permanent-gold)")
                     : "transparent",
-                  display:     "inline-flex",
-                  alignItems:  "center",
-                  gap:         "6px",
-                  transition:  "all 0.2s",
-                  whiteSpace:  "nowrap",
+                  display:      "inline-flex",
+                  alignItems:   "center",
+                  gap:          "6px",
+                  transition:   "all 0.18s",
+                  whiteSpace:   "nowrap",
                 }}>
                 {cat.isLive && (
-                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: activeCategory === "live" ? "white" : "var(--permanent-live)", display: "inline-block", flexShrink: 0 }} />
+                  <span style={{
+                    width: "6px", height: "6px", borderRadius: "50%",
+                    background: activeCategory === "live" ? "white" : "var(--permanent-live)",
+                    display: "inline-block", flexShrink: 0,
+                  }} />
                 )}
                 {cat.label}
               </button>
@@ -168,34 +269,28 @@ export default function Home() {
           </div>
         </div>
 
-        {/* CTAs */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "center", maxWidth: "320px", margin: "0 auto" }}>
-          <button
-            onClick={handleShare}
-            style={{ background: "var(--permanent-gold)", color: "white", border: "none", padding: "14px 30px", borderRadius: "var(--radius-sm)", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, cursor: "pointer", width: "100%" }}>
-            Share an experience
-          </button>
-          <button
-            onClick={handleReadExperiences}
-            style={{ background: "transparent", color: "rgba(246,241,234,0.7)", border: "1px solid rgba(255,255,255,0.18)", padding: "14px 30px", borderRadius: "var(--radius-sm)", fontFamily: "'Inter', sans-serif", fontSize: "13px", cursor: "pointer", width: "100%" }}>
-            Read experiences
-          </button>
-        </div>
-
-        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "rgba(246,241,234,0.28)", marginTop: "16px" }}>
-          Reading and sharing are free. Annie Plus starts at $1.50 a month.
-        </p>
-      </header>
-
-      {/* FEED */}
-      <main id="feed" style={{ maxWidth: "800px", margin: "0 auto", padding: "36px 16px" }}>
-        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "2.5px", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "20px", paddingBottom: "12px", borderBottom: "1px solid var(--border-default)" }}>
-          {feedLoading ? "Loading..." : experiences.length === 0 ? "No experiences yet" : `${experiences.length} experience${experiences.length === 1 ? "" : "s"}`}
+        {/* Feed count */}
+        <p style={{
+          fontFamily: "'Inter', sans-serif",
+          fontSize: "10px",
+          fontWeight: 700,
+          letterSpacing: "2.5px",
+          textTransform: "uppercase",
+          color: "var(--text-muted)",
+          marginBottom: "20px",
+          paddingBottom: "12px",
+          borderBottom: "1px solid var(--border-default)",
+        }}>
+          {feedLoading
+            ? "Loading…"
+            : experiences.length === 0
+              ? "No experiences yet"
+              : `${experiences.length} experience${experiences.length === 1 ? "" : "s"}`}
         </p>
 
         {feedLoading && (
           <div style={{ textAlign: "center", padding: "60px 0", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>
-            Loading experiences...
+            Loading…
           </div>
         )}
 
@@ -249,7 +344,6 @@ export default function Home() {
         })}
       </main>
 
-      {/* SHARE FLOW OVERLAY — no page navigation, instant */}
       <ShareFlow
         open={shareOpen}
         user={user}
