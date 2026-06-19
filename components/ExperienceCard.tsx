@@ -311,7 +311,7 @@ export default function ExperienceCard({
 
       {/* ── BODY ────────────────────────────────────────────────────────── */}
       <div style={{ padding: "16px 20px 0" }}>
-        {excerpt && (
+        {excerpt && excerpt !== pullQuote && (
           <p style={{
             fontSize: "14px", color: "var(--text-soft)",
             lineHeight: 1.7, fontWeight: 300, margin: 0,
