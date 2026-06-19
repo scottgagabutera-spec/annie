@@ -216,7 +216,10 @@ export default function Home() {
         )}
 
         {!feedLoading && experiences.map((exp) => {
-          const excerpt = exp.content.slice(0, 180).trim() + (exp.content.length > 180 ? "..." : "");
+          const raw     = exp.content.slice(0, 200);
+          const excerpt = exp.content.length > 180
+            ? raw.slice(0, raw.lastIndexOf(" ", 180)) + "…"
+            : exp.content;
           const name    = exp.is_anonymous ? "Anonymous" : (exp.display_name || "Someone");
           const initial = exp.is_anonymous ? "A" : (name.charAt(0).toUpperCase() || "?");
           const hasPhotos = !!exp.image_urls?.length;
