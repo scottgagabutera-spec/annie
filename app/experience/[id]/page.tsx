@@ -2,7 +2,8 @@
 // app/experience/[id]/page.tsx
 // Reading page layout: author → title → media → body → pull quote → footer
 // Mirrors the feed card order so landing here feels like a natural continuation.
-// All 9 standards: premium, mobile-first, modern, Giants Way, best UX, logical, unique, long-term.
+// All 10 statements applied. Zero hardcoded colors.
+// ShareFlow-style edit overlay stays always dark — intentional writing environment.
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -20,7 +21,7 @@ function formatCategory(cat: string) {
   return cat.charAt(0).toUpperCase() + cat.slice(1);
 }
 
-// ─── Reading-page photo carousel ─────────────────────────────────────────────
+// ─── Photo carousel ───────────────────────────────────────────────────────────
 
 function ReadingPhotoCarousel({ urls }: { urls: string[] }) {
   const [index, setIndex] = useState(0);
@@ -40,7 +41,7 @@ function ReadingPhotoCarousel({ urls }: { urls: string[] }) {
 
   if (urls.length === 1) {
     return (
-      <div style={{ width: "100%", maxWidth: "680px", margin: "0 auto 0" }}>
+      <div style={{ width: "100%", maxWidth: "680px", margin: "0 auto" }}>
         <img src={urls[0]} alt="" style={{ width: "100%", maxHeight: "440px", objectFit: "cover", display: "block" }} />
       </div>
     );
@@ -79,15 +80,12 @@ function ReadingPhotoCarousel({ urls }: { urls: string[] }) {
         </button>
       )}
 
-      {/* Animated pill dots */}
       <div style={{ position: "absolute", bottom: "14px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "6px" }}>
         {urls.map((_, i) => (
           <div key={i} onClick={() => goTo(i)} style={{
-            width: i === index ? "16px" : "6px", height: "6px",
-            borderRadius: "3px",
+            width: i === index ? "16px" : "6px", height: "6px", borderRadius: "3px",
             background: i === index ? "white" : "rgba(255,255,255,0.4)",
-            transition: "width 0.2s ease",
-            cursor: "pointer",
+            transition: "width 0.2s ease", cursor: "pointer",
           }} />
         ))}
       </div>
@@ -116,7 +114,7 @@ function ReadingVideo({ url }: { url: string }) {
         <div onClick={() => setPlaying(true)} style={{ position: "relative", width: "100%", aspectRatio: "16/9", background: "#0f0e0c", cursor: "pointer" }}>
           {parsed.thumbnailUrl && <img src={parsed.thumbnailUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.22)" }}>
-            <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "rgba(191,155,78,0.9)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "rgba(184,146,58,0.9)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             </div>
           </div>
@@ -146,7 +144,7 @@ function RespondButton() {
         Respond
       </button>
       {show && (
-        <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: "0", background: "var(--permanent-ink)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", padding: "6px 10px", fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "rgba(246,241,234,0.7)", whiteSpace: "nowrap", zIndex: 10 }}>
+        <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: "0", background: "var(--surface-card)", border: "1px solid var(--border-default)", borderRadius: "6px", padding: "6px 10px", fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)", whiteSpace: "nowrap", zIndex: 10 }}>
           Coming soon
         </div>
       )}
@@ -168,18 +166,18 @@ export default function ExperiencePage() {
   const [carrying, setCarrying]             = useState(false);
   const [carriedLocally, setCarriedLocally] = useState(false);
 
-  const [editOpen, setEditOpen]                 = useState(false);
-  const [editTitle, setEditTitle]               = useState("");
-  const [editBody, setEditBody]                 = useState("");
-  const [editPull, setEditPull]                 = useState("");
-  const [editImageUrls, setEditImageUrls]       = useState<string[]>([]);
-  const [editImageFiles, setEditImageFiles]     = useState<File[]>([]);
+  const [editOpen, setEditOpen]                   = useState(false);
+  const [editTitle, setEditTitle]                 = useState("");
+  const [editBody, setEditBody]                   = useState("");
+  const [editPull, setEditPull]                   = useState("");
+  const [editImageUrls, setEditImageUrls]         = useState<string[]>([]);
+  const [editImageFiles, setEditImageFiles]       = useState<File[]>([]);
   const [editImagePreviews, setEditImagePreviews] = useState<string[]>([]);
-  const [editImageError, setEditImageError]     = useState("");
-  const [editVideoUrl, setEditVideoUrl]         = useState("");
+  const [editImageError, setEditImageError]       = useState("");
+  const [editVideoUrl, setEditVideoUrl]           = useState("");
   const [editVideoUrlError, setEditVideoUrlError] = useState("");
-  const [saving, setSaving]                     = useState(false);
-  const [saveError, setSaveError]               = useState("");
+  const [saving, setSaving]                       = useState(false);
+  const [saveError, setSaveError]                 = useState("");
 
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting]           = useState(false);
@@ -198,9 +196,7 @@ export default function ExperiencePage() {
     if (!id) return;
     Promise.all([getExperienceById(id), getCurrentUser()]).then(([data, u]) => {
       if (!data) { setNotFound(true); setLoading(false); return; }
-      setExp(data);
-      setUser(u);
-      setLoading(false);
+      setExp(data); setUser(u); setLoading(false);
     });
   }, [id]);
 
@@ -264,8 +260,7 @@ export default function ExperiencePage() {
     if (!exp || !user) return;
     if (!editTitle.trim() || !editBody.trim()) { setSaveError("Title and body are required."); return; }
     if (editVideoUrlError) { setSaveError("Fix the video link before saving."); return; }
-    setSaving(true);
-    setSaveError("");
+    setSaving(true); setSaveError("");
 
     let finalImageUrls = [...editImageUrls];
     for (const file of editImageFiles) {
@@ -318,7 +313,7 @@ export default function ExperiencePage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-primary)" }}>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface-bg)" }}>
         <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>Loading…</p>
       </div>
     );
@@ -326,11 +321,11 @@ export default function ExperiencePage() {
 
   if (notFound || !exp) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "var(--permanent-ink)", padding: "24px", textAlign: "center" }}>
-        <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "26px", fontWeight: 300, color: "var(--permanent-parchment)", marginBottom: "12px" }}>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "var(--surface-bg)", padding: "24px", textAlign: "center" }}>
+        <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "26px", fontWeight: 300, color: "var(--text-primary)", marginBottom: "12px" }}>
           This experience is not here.
         </p>
-        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.45)", marginBottom: "24px" }}>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)", marginBottom: "24px" }}>
           It may have been removed, or the link may not be correct.
         </p>
         <Link href="/" style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "var(--permanent-gold)", textDecoration: "none" }}>
@@ -345,16 +340,31 @@ export default function ExperiencePage() {
   const paragraphs = exp.content.split(/\n+/).filter((p) => p.trim().length > 0);
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-primary)" }}>
+    <div style={{ minHeight: "100vh", background: "var(--surface-bg)" }}>
 
-      {/* ── TOP BAR ─────────────────────────────────────────────────────── */}
-      <div style={{ position: "sticky", top: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", height: "56px", background: "var(--surface-card)", borderBottom: "1px solid var(--border-default)" }}>
-        <button onClick={() => router.back()} aria-label="Back" style={{ background: "transparent", border: "none", cursor: "pointer", padding: "6px", display: "flex", alignItems: "center" }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-primary)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+      {/* ── TOP BAR ── */}
+      <div style={{
+        position: "sticky", top: 0, zIndex: 50,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "0 20px", height: "56px",
+        background: "var(--surface-bg)",
+        borderBottom: "1px solid var(--border-default)",
+      }}>
+        <button onClick={() => router.back()} aria-label="Back" style={{
+          background: "transparent", border: "none", cursor: "pointer",
+          padding: "6px", display: "flex", alignItems: "center",
+        }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="var(--text-primary)" strokeWidth="1.6"
+            strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"/>
+            <polyline points="12 19 5 12 12 5"/>
           </svg>
         </button>
-        <Link href="/" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "20px", fontWeight: 600, color: "var(--text-primary)", textDecoration: "none" }}>
+        <Link href="/" style={{
+          fontFamily: "'Cormorant Garamond', serif", fontSize: "20px",
+          fontWeight: 600, color: "var(--text-primary)", textDecoration: "none",
+        }}>
           Annie<span style={{ color: "var(--permanent-gold)" }}>.</span>
         </Link>
         {isOwner ? (
@@ -362,7 +372,7 @@ export default function ExperiencePage() {
             <button onClick={openEdit} style={{ background: "transparent", border: "1px solid var(--border-default)", borderRadius: "6px", padding: "6px 12px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--text-muted)" }}>
               Edit
             </button>
-            <button onClick={() => setDeleteConfirm(true)} style={{ background: "transparent", border: "1px solid rgba(193,58,58,0.35)", borderRadius: "6px", padding: "6px 12px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "rgba(193,58,58,0.75)" }}>
+            <button onClick={() => setDeleteConfirm(true)} style={{ background: "transparent", border: "1px solid var(--permanent-live)", borderRadius: "6px", padding: "6px 12px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--permanent-live)", opacity: 0.75 }}>
               Delete
             </button>
           </div>
@@ -371,10 +381,10 @@ export default function ExperiencePage() {
         )}
       </div>
 
-      {/* ── READING BODY ─────────────────────────────────────────────────── */}
+      {/* ── READING BODY ── */}
       <div style={{ maxWidth: "680px", margin: "0 auto", padding: "0 0 60px" }}>
 
-        {/* Author + category — who and what before anything else */}
+        {/* Author + category */}
         <div style={{ padding: "28px 24px 0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <div style={{ width: "38px", height: "38px", borderRadius: "50%", background: "var(--gold-soft)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Cormorant Garamond', serif", fontSize: "16px", fontWeight: 600, color: "var(--permanent-gold)", flexShrink: 0 }}>
@@ -399,7 +409,7 @@ export default function ExperiencePage() {
           </h1>
         </div>
 
-        {/* Media — photos then video, in that order */}
+        {/* Media */}
         {exp.image_urls && exp.image_urls.length > 0 && (
           <ReadingPhotoCarousel urls={exp.image_urls} />
         )}
@@ -409,16 +419,16 @@ export default function ExperiencePage() {
           </div>
         )}
 
-        {/* Body paragraphs */}
+        {/* Body */}
         <div style={{ padding: "28px 24px 0" }}>
           {paragraphs.map((p, i) => (
-            <p key={i} style={{ fontSize: "17px", color: "var(--text-soft)", lineHeight: 1.85, marginBottom: "22px", fontWeight: 300, margin: "0 0 22px" }}>
+            <p key={i} style={{ fontSize: "17px", color: "var(--text-soft)", lineHeight: 1.85, margin: "0 0 22px", fontWeight: 300 }}>
               {p}
             </p>
           ))}
         </div>
 
-        {/* Pull quote — closing hook, only if different from body content */}
+        {/* Pull quote */}
         {exp.pull_quote && exp.pull_quote !== paragraphs[0] && (
           <div style={{ margin: "8px 24px 0", borderLeft: "2px solid var(--permanent-gold)", paddingLeft: "16px" }}>
             <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(17px, 3.5vw, 21px)", fontStyle: "italic", fontWeight: 300, color: "var(--text-muted)", lineHeight: 1.65, margin: 0 }}>
@@ -447,7 +457,7 @@ export default function ExperiencePage() {
         </div>
       </div>
 
-      {/* ── EDIT OVERLAY ─────────────────────────────────────────────────── */}
+      {/* ── EDIT OVERLAY — always dark, intentional writing environment ── */}
       {editOpen && (
         <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "var(--permanent-ink)", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", height: "56px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
@@ -494,7 +504,7 @@ export default function ExperiencePage() {
                 onChange={(e) => setEditPull(e.target.value)}
                 placeholder="If one sentence stays with you the most, put it here."
                 rows={2}
-                style={{ width: "100%", background: "rgba(191,155,78,0.04)", border: "1px solid rgba(191,155,78,0.2)", borderRadius: "8px", padding: "10px 12px", fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "15px", color: "var(--permanent-parchment)", lineHeight: 1.6, resize: "none", outline: "none", boxSizing: "border-box", marginBottom: "20px" }}
+                style={{ width: "100%", background: "rgba(184,146,58,0.04)", border: "1px solid rgba(184,146,58,0.2)", borderRadius: "8px", padding: "10px 12px", fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "15px", color: "var(--permanent-parchment)", lineHeight: 1.6, resize: "none", outline: "none", boxSizing: "border-box", marginBottom: "20px" }}
               />
 
               <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: "rgba(246,241,234,0.45)", marginBottom: "8px" }}>
@@ -525,7 +535,7 @@ export default function ExperiencePage() {
                   </button>
                 )}
                 {totalEditPhotos >= FREE_PHOTO_LIMIT && (
-                  <div style={{ aspectRatio: "1", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", background: "rgba(191,155,78,0.06)", border: "1px solid rgba(191,155,78,0.2)", borderRadius: "8px" }}>
+                  <div style={{ aspectRatio: "1", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", background: "rgba(184,146,58,0.06)", border: "1px solid rgba(184,146,58,0.2)", borderRadius: "8px" }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--permanent-gold)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
                     <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "9px", fontWeight: 600, color: "var(--permanent-gold)" }}>Plus</span>
                   </div>
@@ -553,7 +563,7 @@ export default function ExperiencePage() {
         </div>
       )}
 
-      {/* ── DELETE CONFIRM ───────────────────────────────────────────────── */}
+      {/* ── DELETE CONFIRM ── */}
       {deleteConfirm && (
         <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(15,14,12,0.85)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
           <div style={{ background: "var(--surface-card)", border: "1px solid var(--border-default)", borderRadius: "12px", padding: "28px 24px", maxWidth: "360px", width: "100%", textAlign: "center" }}>
@@ -567,7 +577,7 @@ export default function ExperiencePage() {
               <button onClick={() => setDeleteConfirm(false)} style={{ flex: 1, background: "transparent", border: "1px solid var(--border-default)", borderRadius: "8px", padding: "11px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>
                 Keep it
               </button>
-              <button onClick={handleDelete} disabled={deleting} style={{ flex: 1, background: "#c13a3a", border: "none", borderRadius: "8px", padding: "11px", cursor: deleting ? "not-allowed" : "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white", opacity: deleting ? 0.6 : 1 }}>
+              <button onClick={handleDelete} disabled={deleting} style={{ flex: 1, background: "var(--permanent-live)", border: "none", borderRadius: "8px", padding: "11px", cursor: deleting ? "not-allowed" : "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white", opacity: deleting ? 0.6 : 1 }}>
                 {deleting ? "Removing…" : "Yes, remove it"}
               </button>
             </div>

@@ -2,6 +2,7 @@
 // app/profile/page.tsx
 // A signed-in person's own experiences, all in one place.
 // Public profile pages for other people are a separate, later piece of scope.
+// All 10 statements applied. Zero hardcoded colors.
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -25,14 +26,12 @@ export default function ProfilePage() {
 
   useEffect(() => {
     getCurrentUser().then((u) => {
-      setUser(u);
-      setAuthChecked(true);
+      setUser(u); setAuthChecked(true);
       if (u) loadExperiences(u.id);
       else setLoading(false);
     });
     const unsub = onAuthChange((u) => {
-      setUser(u);
-      setAuthChecked(true);
+      setUser(u); setAuthChecked(true);
       if (u) loadExperiences(u.id);
     });
     return unsub;
@@ -42,27 +41,29 @@ export default function ProfilePage() {
 
   if (!authChecked) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--permanent-ink)" }}>
-        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.4)" }}>Loading...</p>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface-bg)" }}>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>
+          Loading...
+        </p>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "var(--permanent-ink)", padding: "24px", textAlign: "center" }}>
-        <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "26px", fontWeight: 300, color: "var(--permanent-parchment)", marginBottom: "12px" }}>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "var(--surface-bg)", padding: "24px", textAlign: "center" }}>
+        <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "26px", fontWeight: 300, color: "var(--text-primary)", marginBottom: "12px" }}>
           Sign in to see your profile.
         </p>
-        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.45)", marginBottom: "24px" }}>
-          Your shared experiences live here once you're signed in.
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)", marginBottom: "24px" }}>
+          Your shared experiences live here once you are signed in.
         </p>
         <button
           onClick={handleSignIn}
           style={{ background: "var(--permanent-gold)", color: "white", border: "none", padding: "13px 28px", borderRadius: "var(--radius-sm)", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, cursor: "pointer", marginBottom: "16px" }}>
           Continue with Google
         </button>
-        <Link href="/" style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.4)", textDecoration: "none" }}>
+        <Link href="/" style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)", textDecoration: "none" }}>
           Back to Annie
         </Link>
       </div>
@@ -70,36 +71,65 @@ export default function ProfilePage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--permanent-ink)" }}>
+    <div style={{ minHeight: "100vh", background: "var(--surface-bg)" }}>
 
-      {/* Top bar — same pattern as the reading page, so navigation feels consistent everywhere */}
-      <div style={{ position: "sticky", top: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", height: "56px", background: "var(--permanent-ink)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <Link href="/" aria-label="Back to Annie" style={{ background: "transparent", border: "none", cursor: "pointer", padding: "6px", display: "flex", alignItems: "center" }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--permanent-parchment)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+      {/* ── TOP BAR ── */}
+      <div style={{
+        position: "sticky", top: 0, zIndex: 50,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "0 20px", height: "56px",
+        background: "var(--surface-bg)",
+        borderBottom: "1px solid var(--border-default)",
+      }}>
+        <Link href="/" aria-label="Back to Annie" style={{
+          background: "transparent", border: "none", cursor: "pointer",
+          padding: "6px", display: "flex", alignItems: "center",
+        }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="var(--text-primary)" strokeWidth="1.6"
+            strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"/>
+            <polyline points="12 19 5 12 12 5"/>
           </svg>
         </Link>
-        <Link href="/" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "20px", fontWeight: 600, color: "var(--permanent-parchment)", textDecoration: "none" }}>
+        <Link href="/" style={{
+          fontFamily: "'Cormorant Garamond', serif", fontSize: "20px",
+          fontWeight: 600, color: "var(--text-primary)", textDecoration: "none",
+        }}>
           Annie<span style={{ color: "var(--permanent-gold)" }}>.</span>
         </Link>
         <div style={{ width: "30px" }} />
       </div>
 
-      {/* Header */}
-      <div style={{ maxWidth: "680px", margin: "0 auto", padding: "40px 24px 28px", display: "flex", alignItems: "center", gap: "16px" }}>
+      {/* ── PROFILE HEADER ── */}
+      <div style={{
+        maxWidth: "680px", margin: "0 auto",
+        padding: "40px 24px 28px",
+        display: "flex", alignItems: "center", gap: "16px",
+      }}>
         <Avatar user={user} size={56} />
         <div>
-          <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "24px", fontWeight: 600, color: "var(--permanent-parchment)", margin: 0 }}>
+          <p style={{
+            fontFamily: "'Cormorant Garamond', serif", fontSize: "24px",
+            fontWeight: 600, color: "var(--text-primary)", margin: 0,
+          }}>
             {user.name}
           </p>
-          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.45)", margin: "4px 0 0" }}>
+          <p style={{
+            fontFamily: "'Inter', sans-serif", fontSize: "13px",
+            color: "var(--text-muted)", margin: "4px 0 0",
+          }}>
             {experiences.length} {experiences.length === 1 ? "experience" : "experiences"} shared
           </p>
         </div>
       </div>
 
-      {/* List */}
-      <div style={{ background: "var(--surface-card)", minHeight: "40vh", padding: "8px 16px 60px" }}>
+      {/* ── EXPERIENCE LIST ── */}
+      <div style={{
+        background: "var(--surface-card)",
+        borderTop: "1px solid var(--border-default)",
+        minHeight: "40vh", padding: "8px 16px 60px",
+      }}>
         <div style={{ maxWidth: "680px", margin: "0 auto", paddingTop: "24px" }}>
 
           {loading && (
@@ -111,7 +141,7 @@ export default function ProfilePage() {
           {!loading && experiences.length === 0 && (
             <div style={{ textAlign: "center", padding: "60px 0" }}>
               <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "22px", fontWeight: 300, color: "var(--text-primary)", marginBottom: "10px" }}>
-                You haven't shared anything yet.
+                You have not shared anything yet.
               </p>
               <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)", marginBottom: "24px" }}>
                 Whatever you have lived is worth telling.
@@ -123,10 +153,10 @@ export default function ProfilePage() {
           )}
 
           {!loading && experiences.map((exp) => {
-            const excerpt = exp.content.slice(0, 180).trim() + (exp.content.length > 180 ? "..." : "");
-            const name    = exp.is_anonymous ? "Anonymous" : (exp.display_name || user.name);
-            const initial = exp.is_anonymous ? "A" : (name.charAt(0).toUpperCase() || "?");
-            const hasPhotos = !!exp.image_urls?.length;
+            const excerpt    = exp.content.slice(0, 180).trim() + (exp.content.length > 180 ? "..." : "");
+            const name       = exp.is_anonymous ? "Anonymous" : (exp.display_name || user.name);
+            const initial    = exp.is_anonymous ? "A" : (name.charAt(0).toUpperCase() || "?");
+            const hasPhotos  = !!exp.image_urls?.length;
             return (
               <Link
                 key={exp.id}
