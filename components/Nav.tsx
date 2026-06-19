@@ -1,7 +1,5 @@
 "use client";
 // components/Nav.tsx
-// Smart scroll nav — hides on scroll down, reappears on scroll up.
-// Giants Way standard: never jumps, never pulls, always intentional.
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -21,11 +19,13 @@ type Props = {
 };
 
 export default function Nav({ user, theme, mounted, onMenuOpen, onLogoClick, onSignIn, onSignOut, onShare, onToggleTheme }: Props) {
-  const [visible, setVisible] = useState(true);
+  const [visible, setVisible]           = useState(true);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const lastScrollY = useRef(0);
-  const ticking = useRef(false);
+  const ticking    = useRef(false);
+  const menuRef    = useRef<HTMLDivElement>(null);
 
+  // Smart scroll hide/show
   useEffect(() => {
     const handleScroll = () => {
       if (ticking.current) return;
@@ -33,65 +33,61 @@ export default function Nav({ user, theme, mounted, onMenuOpen, onLogoClick, onS
       requestAnimationFrame(() => {
         const currentY = window.scrollY;
         const diff = currentY - lastScrollY.current;
-
-        // Show nav when: scrolling up, or near the top (within 80px)
-        if (diff < -4 || currentY < 80) {
-          setVisible(true);
-        }
-        // Hide nav when: scrolling down more than 6px and not near top
-        else if (diff > 6 && currentY > 80) {
-          setVisible(false);
-        }
-
+        if (diff < -4 || currentY < 80) setVisible(true);
+        else if (diff > 6 && currentY > 80) setVisible(false);
         lastScrollY.current = currentY;
         ticking.current = false;
       });
     };
-
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Click outside to dismiss — standard on every premium product
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setAccountMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [accountMenuOpen]);
+
+  const closeMenu = () => setAccountMenuOpen(false);
+
   return (
     <nav style={{
-      position:   "fixed",
-      top:        0,
-      left:       0,
-      right:      0,
-      height:     "56px",
-      background: "var(--permanent-ink)",
-      borderBottom: "1px solid rgba(255,255,255,0.06)",
-      display:    "flex",
-      alignItems: "center",
+      position:       "fixed",
+      top:            0,
+      left:           0,
+      right:          0,
+      height:         "56px",
+      background:     "var(--permanent-ink)",
+      borderBottom:   "1px solid rgba(255,255,255,0.06)",
+      display:        "flex",
+      alignItems:     "center",
       justifyContent: "space-between",
-      padding:    "0 20px",
-      zIndex:     100,
-      // Smooth slide up/down — no jarring jump
-      transform:  visible ? "translateY(0)" : "translateY(-100%)",
-      transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-      willChange: "transform",
+      padding:        "0 20px",
+      zIndex:         100,
+      transform:      visible ? "translateY(0)" : "translateY(-100%)",
+      transition:     "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      willChange:     "transform",
     }}>
-      {/* Logo — now a real "go home" action */}
+
+      {/* Logo */}
       <button
         onClick={onLogoClick}
-        aria-label="Annie, go to homepage"
-        style={{
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          padding: 0,
-          fontFamily: "'Cormorant Garamond', serif",
-          fontSize: "24px",
-          fontWeight: 600,
-          color: "var(--permanent-parchment)",
-          letterSpacing: "0.5px",
-          lineHeight: 1,
-        }}>
+        aria-label="Annie — go to homepage"
+        style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, fontFamily: "'Cormorant Garamond', serif", fontSize: "24px", fontWeight: 600, color: "var(--permanent-parchment)", letterSpacing: "0.5px", lineHeight: 1 }}>
         Annie<span style={{ color: "var(--permanent-gold)" }}>.</span>
       </button>
 
-      {/* Desktop nav */}
+      {/* ── DESKTOP ── */}
       <div className="desktop-nav" style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+
+        {/* Theme toggle */}
         <button
           onClick={onToggleTheme}
           aria-label="Toggle theme"
@@ -112,7 +108,8 @@ export default function Nav({ user, theme, mounted, onMenuOpen, onLogoClick, onS
         </button>
 
         {user ? (
-          <div style={{ position: "relative" }}>
+          <div ref={menuRef} style={{ position: "relative" }}>
+            {/* Avatar trigger */}
             <button
               onClick={() => setAccountMenuOpen((v) => !v)}
               style={{ display: "flex", alignItems: "center", gap: "8px", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
@@ -120,31 +117,73 @@ export default function Nav({ user, theme, mounted, onMenuOpen, onLogoClick, onS
               <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 500, color: "rgba(246,241,234,0.75)" }}>
                 {user.name.split(" ")[0]}
               </span>
+              {/* Chevron — signals it's a menu */}
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(246,241,234,0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: accountMenuOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.18s ease" }}>
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
             </button>
 
+            {/* Dropdown — click outside closes it */}
             {accountMenuOpen && (
-              <>
-                <div onClick={() => setAccountMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 150 }} />
-                <div style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, background: "#16140f", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "var(--radius-sm)", minWidth: "180px", overflow: "hidden", zIndex: 160, boxShadow: "0 12px 28px rgba(0,0,0,0.4)" }}>
-                  <Link
-                    href="/profile"
-                    onClick={() => setAccountMenuOpen(false)}
-                    style={{ display: "block", padding: "12px 16px", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.85)", textDecoration: "none" }}>
-                    My experiences
-                  </Link>
-                  <Link
-                    href="/settings"
-                    onClick={() => setAccountMenuOpen(false)}
-                    style={{ display: "block", padding: "12px 16px", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.85)", textDecoration: "none", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                    Settings
-                  </Link>
-                  <button
-                    onClick={() => { setAccountMenuOpen(false); onSignOut(); }}
-                    style={{ display: "block", width: "100%", textAlign: "left", padding: "12px 16px", background: "transparent", border: "none", borderTop: "1px solid rgba(255,255,255,0.06)", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.5)" }}>
-                    Sign out
-                  </button>
+              <div style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, background: "#16140f", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", minWidth: "210px", overflow: "hidden", zIndex: 160, boxShadow: "0 12px 32px rgba(0,0,0,0.5)" }}>
+
+                {/* User identity at top */}
+                <div style={{ padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                  <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "var(--permanent-parchment)", margin: 0 }}>{user.name}</p>
+                  <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "rgba(246,241,234,0.35)", margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email}</p>
                 </div>
-              </>
+
+                {/* Navigation items */}
+                {[
+                  { label: "My profile",     href: "/profile" },
+                  { label: "My experiences", href: "/profile" },
+                ].map((item) => (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    onClick={closeMenu}
+                    style={{ display: "block", padding: "11px 16px", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.8)", textDecoration: "none" }}>
+                    {item.label}
+                  </Link>
+                ))}
+
+                {/* Annie Plus — investor-visible monetisation surface */}
+                <Link
+                  href="/plus"
+                  onClick={closeMenu}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.8)", textDecoration: "none", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                  Annie Plus
+                  <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "9px", fontWeight: 600, letterSpacing: "1px", textTransform: "uppercase", color: "var(--permanent-gold)", background: "rgba(191,155,78,0.12)", border: "1px solid rgba(191,155,78,0.25)", borderRadius: "4px", padding: "2px 6px" }}>
+                    Soon
+                  </span>
+                </Link>
+
+                {/* Notifications — shows the social layer is planned */}
+                <div
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.45)", cursor: "default", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                  Notifications
+                  <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "9px", fontWeight: 600, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(246,241,234,0.3)", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "4px", padding: "2px 6px" }}>
+                    Soon
+                  </span>
+                </div>
+
+                <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }} />
+
+                {/* Settings */}
+                <Link
+                  href="/settings"
+                  onClick={closeMenu}
+                  style={{ display: "block", padding: "11px 16px", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.8)", textDecoration: "none" }}>
+                  Settings
+                </Link>
+
+                {/* Sign out */}
+                <button
+                  onClick={() => { closeMenu(); onSignOut(); }}
+                  style={{ display: "block", width: "100%", textAlign: "left", padding: "11px 16px", background: "transparent", border: "none", borderTop: "1px solid rgba(255,255,255,0.06)", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.4)" }}>
+                  Sign out
+                </button>
+              </div>
             )}
           </div>
         ) : (
@@ -153,19 +192,24 @@ export default function Nav({ user, theme, mounted, onMenuOpen, onLogoClick, onS
           </span>
         )}
 
-        <button onClick={onShare} style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 600, background: "var(--permanent-gold)", color: "white", border: "none", padding: "8px 18px", borderRadius: "var(--radius-sm)", cursor: "pointer", whiteSpace: "nowrap" }}>
+        <button
+          onClick={onShare}
+          style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 600, background: "var(--permanent-gold)", color: "white", border: "none", padding: "8px 18px", borderRadius: "var(--radius-sm)", cursor: "pointer", whiteSpace: "nowrap" }}>
           Share an experience
         </button>
       </div>
 
-      {/* Mobile nav */}
+      {/* ── MOBILE ── */}
       <div className="mobile-nav" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         {user && (
           <Link href="/profile" aria-label="Your profile" style={{ display: "flex", alignItems: "center" }}>
             <Avatar user={user} size={28} />
           </Link>
         )}
-        <button onClick={onMenuOpen} aria-label="Open menu" style={{ background: "transparent", border: "none", cursor: "pointer", padding: "6px", display: "flex", alignItems: "center" }}>
+        <button
+          onClick={onMenuOpen}
+          aria-label="Open menu"
+          style={{ background: "transparent", border: "none", cursor: "pointer", padding: "6px", display: "flex", alignItems: "center" }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--permanent-parchment)" strokeWidth="1.6" strokeLinecap="round">
             <line x1="3" y1="6" x2="21" y2="6"/>
             <line x1="3" y1="12" x2="21" y2="12"/>

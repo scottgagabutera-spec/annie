@@ -1,6 +1,7 @@
 "use client";
 // components/SlideMenu.tsx
-// Mobile slide-in menu. Receives user + handlers as props — no auth logic inside.
+// Mobile slide menu — full feature parity with desktop dropdown.
+// Investor-ready: Annie Plus and Notifications visible with Coming Soon labels.
 
 import Link from "next/link";
 import { AnnieUser } from "../lib/auth";
@@ -19,49 +20,83 @@ type Props = {
   onReadExperiences: () => void;
 };
 
-const NAV_LINKS = [
+type NavItem =
+  | { type: "link";   label: string; href: string;  soon?: boolean; iconPath: string }
+  | { type: "action"; label: string; soon?: boolean; iconPath: string };
+
+const NAV_ITEMS: NavItem[] = [
   {
-    label: "Read experiences",
-    type:  "scroll" as const,
-    path:  "M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z",
+    type:     "link",
+    label:    "My profile",
+    href:     "/profile",
+    iconPath: "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z",
   },
   {
-    label: "My profile",
-    type:  "link" as const,
-    href:  "/profile",
-    path:  "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z",
+    type:     "link",
+    label:    "My experiences",
+    href:     "/profile",
+    iconPath: "M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z",
   },
   {
-    label: "Settings",
-    type:  "link" as const,
-    href:  "/settings",
-    path:  "M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z",
+    type:     "link",
+    label:    "Annie Plus",
+    href:     "/plus",
+    soon:     true,
+    iconPath: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",
   },
   {
-    label: "Annie Plus",
-    type:  "link" as const,
-    href:  "/plus",
-    path:  "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",
+    type:     "action",
+    label:    "Notifications",
+    soon:     true,
+    iconPath: "M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0",
+  },
+  {
+    type:     "link",
+    label:    "Settings",
+    href:     "/settings",
+    iconPath: "M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z",
   },
 ];
+
+function SoonBadge({ muted = false }: { muted?: boolean }) {
+  return (
+    <span style={{
+      fontFamily:    "'Inter', sans-serif",
+      fontSize:      "9px",
+      fontWeight:    600,
+      letterSpacing: "1px",
+      textTransform: "uppercase" as const,
+      color:         muted ? "rgba(246,241,234,0.3)" : "var(--permanent-gold)",
+      background:    muted ? "rgba(255,255,255,0.05)" : "rgba(191,155,78,0.12)",
+      border:        `1px solid ${muted ? "rgba(255,255,255,0.08)" : "rgba(191,155,78,0.25)"}`,
+      borderRadius:  "4px",
+      padding:       "2px 6px",
+      marginLeft:    "auto",
+      flexShrink:    0,
+    }}>
+      Soon
+    </span>
+  );
+}
 
 export default function SlideMenu({ open, user, theme, mounted, onClose, onSignIn, onSignOut, onShare, onToggleTheme, onReadExperiences }: Props) {
   return (
     <div style={{
-      position:      "fixed",
-      top:           0,
-      right:         open ? 0 : "-290px",
-      width:         "270px",
-      height:        "100%",
-      background:    "var(--permanent-ink)",
-      zIndex:        300,
-      transition:    "right 0.25s ease",
-      display:       "flex",
-      flexDirection: "column",
-      overflowY:     "auto",
+      position:           "fixed",
+      top:                0,
+      right:              open ? 0 : "-290px",
+      width:              "270px",
+      height:             "100%",
+      background:         "var(--permanent-ink)",
+      zIndex:             300,
+      transition:         "right 0.25s ease",
+      display:            "flex",
+      flexDirection:      "column",
+      overflowY:          "auto",
       overscrollBehavior: "contain",
     }}>
-      {/* Header row */}
+
+      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "20px", fontWeight: 600, color: "var(--permanent-parchment)" }}>
           Annie<span style={{ color: "var(--permanent-gold)" }}>.</span>
@@ -73,35 +108,49 @@ export default function SlideMenu({ open, user, theme, mounted, onClose, onSignI
         </button>
       </div>
 
-      {/* Nav links — every item here actually goes somewhere */}
+      {/* Nav items */}
       <div style={{ padding: "4px 12px" }}>
-        {NAV_LINKS.map((item) => {
+        {NAV_ITEMS.map((item) => {
+          const isDisabled = item.soon && item.type === "action";
           const inner = (
             <>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(246,241,234,0.5)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <path d={item.path}/>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke={isDisabled ? "rgba(246,241,234,0.3)" : "rgba(246,241,234,0.5)"}
+                strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d={item.iconPath}/>
               </svg>
-              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 500, color: "rgba(246,241,234,0.75)" }}>{item.label}</span>
+              <span style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize:   "14px",
+                fontWeight: 500,
+                color:      isDisabled ? "rgba(246,241,234,0.35)" : "rgba(246,241,234,0.75)",
+                flex:       1,
+              }}>
+                {item.label}
+              </span>
+              {item.soon && <SoonBadge muted={isDisabled} />}
             </>
           );
 
-          if (item.type === "link") {
+          const rowStyle: React.CSSProperties = {
+            display:    "flex",
+            alignItems: "center",
+            gap:        "12px",
+            padding:    "11px 8px",
+            cursor:     isDisabled ? "default" : "pointer",
+            textDecoration: "none",
+          };
+
+          if (item.type === "link" && !isDisabled) {
             return (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={onClose}
-                style={{ display: "flex", alignItems: "center", gap: "12px", padding: "11px 8px", cursor: "pointer", textDecoration: "none" }}>
+              <Link key={item.label} href={item.href} onClick={onClose} style={rowStyle}>
                 {inner}
               </Link>
             );
           }
 
           return (
-            <div
-              key={item.label}
-              onClick={() => { onReadExperiences(); onClose(); }}
-              style={{ display: "flex", alignItems: "center", gap: "12px", padding: "11px 8px", cursor: "pointer" }}>
+            <div key={item.label} style={rowStyle}>
               {inner}
             </div>
           );
@@ -112,8 +161,11 @@ export default function SlideMenu({ open, user, theme, mounted, onClose, onSignI
 
       {/* Bottom section */}
       <div style={{ padding: "8px 20px 36px", display: "flex", flexDirection: "column", gap: "8px" }}>
+
         {/* Theme toggle */}
-        <button onClick={onToggleTheme} style={{ display: "flex", alignItems: "center", gap: "10px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "9px 14px", cursor: "pointer", width: "100%" }}>
+        <button
+          onClick={onToggleTheme}
+          style={{ display: "flex", alignItems: "center", gap: "10px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "9px 14px", cursor: "pointer", width: "100%" }}>
           {mounted && theme === "dark" ? (
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(246,241,234,0.6)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="4"/>
@@ -138,20 +190,30 @@ export default function SlideMenu({ open, user, theme, mounted, onClose, onSignI
             <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 2px" }}>
               <Avatar user={user} size={34} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "var(--permanent-parchment)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.name}</p>
-                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "rgba(246,241,234,0.4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email}</p>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "var(--permanent-parchment)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: 0 }}>
+                  {user.name}
+                </p>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "rgba(246,241,234,0.4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: "2px 0 0" }}>
+                  {user.email}
+                </p>
               </div>
             </div>
-            <button onClick={onSignOut} style={{ width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "9px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.4)" }}>
+            <button
+              onClick={onSignOut}
+              style={{ width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "9px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.4)" }}>
               Sign out
             </button>
           </>
         ) : (
           <>
-            <button onClick={onShare} style={{ width: "100%", background: "var(--permanent-gold)", border: "none", borderRadius: "8px", padding: "11px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white" }}>
+            <button
+              onClick={onShare}
+              style={{ width: "100%", background: "var(--permanent-gold)", border: "none", borderRadius: "8px", padding: "11px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white" }}>
               Share an experience
             </button>
-            <button onClick={onSignIn} style={{ width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", padding: "10px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.7)" }}>
+            <button
+              onClick={onSignIn}
+              style={{ width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", padding: "10px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.7)" }}>
               Sign in with Google
             </button>
           </>
