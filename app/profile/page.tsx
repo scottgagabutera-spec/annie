@@ -126,6 +126,7 @@ export default function ProfilePage() {
             const excerpt = exp.content.slice(0, 180).trim() + (exp.content.length > 180 ? "..." : "");
             const name    = exp.is_anonymous ? "Anonymous" : (exp.display_name || user.name);
             const initial = exp.is_anonymous ? "A" : (name.charAt(0).toUpperCase() || "?");
+            const hasPhotos = !!exp.image_urls?.length;
             return (
               <Link
                 key={exp.id}
@@ -142,9 +143,9 @@ export default function ProfilePage() {
                   responseCount={exp.response_count}
                   readTime={exp.read_time_minutes}
                   isLive={exp.is_live}
-                  mediaType={exp.image_urls?.length ? "image" : "none"}
-                  mediaUrl={exp.image_urls?.[0]}
-                  mediaCount={exp.image_urls?.length}
+                  mediaType={hasPhotos ? "image" : (exp.video_url ? "video" : "none")}
+                  mediaUrl={hasPhotos ? exp.image_urls[0] : (exp.video_url || undefined)}
+                  imageUrls={exp.image_urls}
                 />
               </Link>
             );
