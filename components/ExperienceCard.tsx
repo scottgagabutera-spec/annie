@@ -2,7 +2,7 @@
 // components/ExperienceCard.tsx
 // Card layout order: author → title → media → excerpt → pull quote → footer
 // One unified surface. No dark/light split. Pull quote as closing hook, not entry point.
-// All 9 standards: premium, mobile-first, modern, Giants Way, best UX, logical, unique, long-term.
+// All 8 statements: mobile first, user friendly, modern, premium, giants way, long term, consistent, unique.
 
 import { useRef, useState } from "react";
 import { parseVideoUrl } from "../lib/experiences";
@@ -10,25 +10,26 @@ import { parseVideoUrl } from "../lib/experiences";
 type MediaType = "image" | "video" | "none";
 
 type Props = {
-  pullQuote:     string;
-  category:      string;
-  tag?:          string;
-  authorInitial: string;
-  authorName:    string;
-  authorNote?:   string;
-  title:         string;
-  excerpt?:      string;
-  mediaType?:    MediaType;
-  mediaUrl?:     string;
-  imageUrls?:    string[];
-  videoUrl?:     string;
-  mediaCount?:   number;
-  isLive?:       boolean;
-  liveStarted?:  string;
+  pullQuote:      string;
+  category:       string;
+  tag?:           string;
+  authorInitial:  string;
+  authorName:     string;
+  authorUsername?: string | null; // @handle — shown under display name
+  authorNote?:    string;
+  title:          string;
+  excerpt?:       string;
+  mediaType?:     MediaType;
+  mediaUrl?:      string;
+  imageUrls?:     string[];
+  videoUrl?:      string;
+  mediaCount?:    number;
+  isLive?:        boolean;
+  liveStarted?:   string;
   carriedCount?:  string | number;
   responseCount?: string | number;
   readTime?:      string | number;
-  isPlus?:       boolean;
+  isPlus?:        boolean;
 };
 
 // ─── Photo carousel ───────────────────────────────────────────────────────────
@@ -123,7 +124,6 @@ function PhotoCarousel({ urls, hasVideo = false }: { urls: string[]; hasVideo?: 
         </button>
       )}
 
-      {/* Dot indicators — centered bottom */}
       <div style={{ position: "absolute", bottom: "12px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "6px" }}>
         {urls.map((_, i) => (
           <div key={i} onClick={(e) => goTo(i, e)} style={{
@@ -136,7 +136,6 @@ function PhotoCarousel({ urls, hasVideo = false }: { urls: string[]; hasVideo?: 
         ))}
       </div>
 
-      {/* Counter — top right */}
       <div style={{ position: "absolute", top: "10px", right: "10px", background: "rgba(15,14,12,0.65)", border: "0.5px solid rgba(255,255,255,0.12)", borderRadius: "4px", padding: "3px 8px", fontFamily: "'Inter', sans-serif", fontSize: "10px", color: "rgba(246,241,234,0.8)", fontWeight: 500 }}>
         {index + 1} of {urls.length}
       </div>
@@ -232,10 +231,10 @@ function RespondButton() {
 // ─── Main card ────────────────────────────────────────────────────────────────
 
 export default function ExperienceCard({
-  pullQuote, category, tag, authorInitial, authorName, authorNote,
-  title, excerpt, mediaType = "none", mediaUrl, imageUrls, videoUrl, mediaCount,
-  isLive = false, liveStarted, carriedCount = 0, responseCount = 0,
-  readTime, isPlus = false,
+  pullQuote, category, tag, authorInitial, authorName, authorUsername,
+  authorNote, title, excerpt, mediaType = "none", mediaUrl, imageUrls,
+  videoUrl, mediaCount, isLive = false, liveStarted, carriedCount = 0,
+  responseCount = 0, readTime, isPlus = false,
 }: Props) {
   const photos = imageUrls && imageUrls.length > 0
     ? imageUrls
@@ -251,7 +250,6 @@ export default function ExperienceCard({
       transition: "border-color 0.18s ease",
     }}>
 
-      {/* Live bar — only for live posts */}
       {isLive && <LiveBar started={liveStarted} />}
 
       {/* ── TOP: Author + category pill ─────────────────────────────────── */}
@@ -267,18 +265,29 @@ export default function ExperienceCard({
             {authorInitial}
           </div>
           <div>
-            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.2 }}>
+            <p style={{
+              fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600,
+              color: "var(--text-primary)", lineHeight: 1.2, margin: 0,
+            }}>
               {authorName}
             </p>
+            {/* @handle — shown under display name, Giants Way pattern (Twitter/Instagram/Threads) */}
+            {authorUsername && !isLive && (
+              <p style={{
+                fontFamily: "'Inter', sans-serif", fontSize: "11px",
+                color: "var(--text-muted)", marginTop: "1px", lineHeight: 1, margin: "1px 0 0 0",
+              }}>
+                @{authorUsername}
+              </p>
+            )}
             {authorNote && (
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)", marginTop: "2px", margin: "2px 0 0 0" }}>
                 {authorNote}
               </p>
             )}
           </div>
         </div>
 
-        {/* Category pill — top right */}
         <span style={{
           fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 600,
           letterSpacing: "1.5px", textTransform: "uppercase",
@@ -321,7 +330,7 @@ export default function ExperienceCard({
         )}
       </div>
 
-      {/* ── PULL QUOTE — closing hook ────────────────────────────────────── */}
+      {/* ── PULL QUOTE ──────────────────────────────────────────────────── */}
       <div style={{ margin: "16px 20px 0", borderLeft: "2px solid var(--permanent-gold)", paddingLeft: "14px" }}>
         <p style={{
           fontFamily: "'Cormorant Garamond', serif",

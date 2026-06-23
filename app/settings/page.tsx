@@ -2,15 +2,17 @@
 // app/settings/page.tsx
 // Four sections: Identity, Appearance, Notifications, Account.
 // Profile photo upload and delete account are functional.
+// @username edit with real-time availability check and 14-day cooldown.
 // Notifications are visible but honest coming soon.
-// All 10 statements applied. Zero hardcoded colors.
+// All 8 statements applied. Zero hardcoded colors.
 
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, useCallback, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import {
   AnnieUser, getCurrentUser, onAuthChange,
   signOut, updateDisplayName, uploadAvatar,
+  checkUsernameAvailable, updateUsername, getCanChangeUsernameAt,
 } from "../../lib/auth";
 import Avatar from "../../components/Avatar";
 
@@ -121,25 +123,45 @@ export default function SettingsPage() {
   const [user, setUser]               = useState<AnnieUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
+  // Display name
   const [nameEditing, setNameEditing] = useState(false);
   const [nameValue, setNameValue]     = useState("");
   const [nameSaving, setNameSaving]   = useState(false);
   const [nameError, setNameError]     = useState("");
   const [nameSaved, setNameSaved]     = useState(false);
 
+  // Avatar
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError]         = useState("");
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
+  // Username
+  const [usernameEditing, setUsernameEditing]   = useState(false);
+  const [usernameValue, setUsernameValue]       = useState("");
+  const [usernameStatus, setUsernameStatus]     = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [usernameSaving, setUsernameSaving]     = useState(false);
+  const [usernameError, setUsernameError]       = useState("");
+  const [usernameSaved, setUsernameSaved]       = useState(false);
+  const [cooldownUntil, setCooldownUntil]       = useState<Date | null>(null);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Delete account
   const [deleteStage, setDeleteStage] = useState<"idle" | "confirm" | "deleting">("idle");
   const [deleteError, setDeleteError] = useState("");
   const [deleteInput, setDeleteInput] = useState("");
 
   useEffect(() => {
     setMounted(true);
-    getCurrentUser().then((u) => {
-      setUser(u); setAuthChecked(true);
-      if (u) setNameValue(u.name);
+    getCurrentUser().then(async (u) => {
+      setUser(u);
+      setAuthChecked(true);
+      if (u) {
+        setNameValue(u.name);
+        setUsernameValue(u.username || "");
+        // Check cooldown for existing users
+        const canChangeAt = await getCanChangeUsernameAt(u.id);
+        setCooldownUntil(canChangeAt);
+      }
     });
     const unsub = onAuthChange((u) => {
       setUser(u);
@@ -147,6 +169,47 @@ export default function SettingsPage() {
     });
     return unsub;
   }, []);
+
+  // Real-time username availability check (debounced 300ms)
+  const checkUsername = useCallback(async (value: string) => {
+    if (!value || value.length < 3) { setUsernameStatus("idle"); return; }
+    const pattern = /^[a-z_][a-z0-9_]{2,19}$/;
+    if (!pattern.test(value)) { setUsernameStatus("invalid"); return; }
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    setUsernameStatus("checking");
+    debounceTimer.current = setTimeout(async () => {
+      // Don't call API if it's the same as current username
+      if (value === user?.username) { setUsernameStatus("available"); return; }
+      const available = await checkUsernameAvailable(value);
+      setUsernameStatus(available ? "available" : "taken");
+    }, 300);
+  }, [user?.username]);
+
+  const handleUsernameChange = (value: string) => {
+    const cleaned = value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+    setUsernameValue(cleaned);
+    checkUsername(cleaned);
+  };
+
+  const handleSaveUsername = async () => {
+    if (!user || usernameStatus !== "available") return;
+    setUsernameSaving(true);
+    setUsernameError("");
+    const result = await updateUsername(user.id, usernameValue);
+    if (!result.ok) {
+      setUsernameError(result.error || "Could not save. Try again.");
+      setUsernameSaving(false);
+      return;
+    }
+    setUser({ ...user, username: usernameValue });
+    setUsernameSaving(false);
+    setUsernameEditing(false);
+    setUsernameSaved(true);
+    // Reset cooldown display
+    const canChangeAt = await getCanChangeUsernameAt(user.id);
+    setCooldownUntil(canChangeAt);
+    setTimeout(() => setUsernameSaved(false), 2500);
+  };
 
   const handleAvatarSelect = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -190,12 +253,19 @@ export default function SettingsPage() {
     }
   };
 
+  // Username status indicator
+  const UsernameIndicator = () => {
+    if (usernameStatus === "checking") return <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--text-muted)" }}>...</span>;
+    if (usernameStatus === "available") return <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--permanent-gold)", fontWeight: 600 }}>✓</span>;
+    if (usernameStatus === "taken") return <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--permanent-live)", fontWeight: 600 }}>✗</span>;
+    if (usernameStatus === "invalid") return <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--permanent-live)" }}>3 to 20 characters, letters, numbers, underscore only</span>;
+    return null;
+  };
+
   if (!authChecked) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface-bg)" }}>
-        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>
-          Loading...
-        </p>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>Loading...</p>
       </div>
     );
   }
@@ -224,21 +294,12 @@ export default function SettingsPage() {
         background: "var(--surface-bg)",
         borderBottom: "1px solid var(--border-default)",
       }}>
-        <Link href="/" aria-label="Back to Annie" style={{
-          background: "transparent", border: "none", cursor: "pointer",
-          padding: "6px", display: "flex", alignItems: "center",
-        }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke="var(--text-primary)" strokeWidth="1.6"
-            strokeLinecap="round" strokeLinejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12"/>
-            <polyline points="12 19 5 12 12 5"/>
+        <Link href="/" aria-label="Back to Annie" style={{ background: "transparent", border: "none", cursor: "pointer", padding: "6px", display: "flex", alignItems: "center" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-primary)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
           </svg>
         </Link>
-        <Link href="/" style={{
-          fontFamily: "'Cormorant Garamond', serif", fontSize: "20px",
-          fontWeight: 600, color: "var(--text-primary)", textDecoration: "none",
-        }}>
+        <Link href="/" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "20px", fontWeight: 600, color: "var(--text-primary)", textDecoration: "none" }}>
           Annie<span style={{ color: "var(--permanent-gold)" }}>.</span>
         </Link>
         <div style={{ width: "30px" }} />
@@ -246,10 +307,7 @@ export default function SettingsPage() {
 
       {/* ── PAGE TITLE ── */}
       <div style={{ maxWidth: "600px", margin: "0 auto", padding: "32px 20px 24px" }}>
-        <h1 style={{
-          fontFamily: "'Cormorant Garamond', serif", fontSize: "28px",
-          fontWeight: 300, color: "var(--text-primary)", margin: 0,
-        }}>
+        <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "28px", fontWeight: 300, color: "var(--text-primary)", margin: 0 }}>
           Settings
         </h1>
       </div>
@@ -259,17 +317,15 @@ export default function SettingsPage() {
         {/* ── IDENTITY ── */}
         <SectionLabel label="Identity" />
         <SettingsCard>
+
+          {/* Profile photo */}
           <SettingsRow
             label="Profile photo"
             sub={avatarUploading ? "Uploading..." : avatarError || "Shown next to your name on experiences you share."}
             right={
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 {user && <Avatar user={user} size={40} />}
-                <input
-                  ref={avatarInputRef} type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={handleAvatarSelect} style={{ display: "none" }}
-                />
+                <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleAvatarSelect} style={{ display: "none" }} />
                 <OutlineButton onClick={() => avatarInputRef.current?.click()} disabled={avatarUploading}>
                   {avatarUploading ? "Uploading..." : "Change"}
                 </OutlineButton>
@@ -277,6 +333,7 @@ export default function SettingsPage() {
             }
           />
 
+          {/* Display name */}
           <SettingsRow
             topBorder label="Display name"
             sub={nameEditing ? undefined : (nameSaved ? "Saved." : (user?.name || ""))}
@@ -287,57 +344,87 @@ export default function SettingsPage() {
                     value={nameValue}
                     onChange={(e) => setNameValue(e.target.value)}
                     autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleSaveName();
-                      if (e.key === "Escape") setNameEditing(false);
-                    }}
-                    style={{
-                      background: "var(--surface-mid)",
-                      border: "1px solid var(--border-default)",
-                      borderRadius: "8px", padding: "8px 12px",
-                      fontFamily: "'Inter', sans-serif", fontSize: "13px",
-                      color: "var(--text-primary)", outline: "none", width: "160px",
-                    }}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleSaveName(); if (e.key === "Escape") setNameEditing(false); }}
+                    style={{ background: "var(--surface-mid)", border: "1px solid var(--border-default)", borderRadius: "8px", padding: "8px 12px", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-primary)", outline: "none", width: "160px" }}
                   />
-                  {nameError && (
-                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--permanent-live)", margin: 0 }}>
-                      {nameError}
-                    </p>
-                  )}
+                  {nameError && <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--permanent-live)", margin: 0 }}>{nameError}</p>}
                   <div style={{ display: "flex", gap: "6px" }}>
-                    <button
-                      onClick={() => setNameEditing(false)}
-                      style={{ background: "transparent", border: "1px solid var(--border-default)", borderRadius: "6px", padding: "6px 10px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--text-muted)" }}>
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSaveName} disabled={nameSaving}
-                      style={{ background: "var(--permanent-gold)", border: "none", borderRadius: "6px", padding: "6px 12px", cursor: nameSaving ? "not-allowed" : "pointer", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 600, color: "white", opacity: nameSaving ? 0.6 : 1 }}>
+                    <button onClick={() => setNameEditing(false)} style={{ background: "transparent", border: "1px solid var(--border-default)", borderRadius: "6px", padding: "6px 10px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--text-muted)" }}>Cancel</button>
+                    <button onClick={handleSaveName} disabled={nameSaving} style={{ background: "var(--permanent-gold)", border: "none", borderRadius: "6px", padding: "6px 12px", cursor: nameSaving ? "not-allowed" : "pointer", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 600, color: "white", opacity: nameSaving ? 0.6 : 1 }}>
                       {nameSaving ? "Saving..." : "Save"}
                     </button>
                   </div>
                 </div>
               ) : (
-                <OutlineButton onClick={() => { setNameEditing(true); setNameError(""); }}>
-                  Edit
+                <OutlineButton onClick={() => { setNameEditing(true); setNameError(""); }}>Edit</OutlineButton>
+              )
+            }
+          />
+
+          {/* @username */}
+          <SettingsRow
+            topBorder
+            label="Username"
+            sub={
+              usernameEditing
+                ? undefined
+                : usernameSaved
+                  ? "Saved."
+                  : cooldownUntil
+                    ? `You can change this again on ${cooldownUntil.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`
+                    : user?.username
+                      ? `@${user.username}`
+                      : "Not set yet."
+            }
+            right={
+              usernameEditing ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", alignItems: "flex-end" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <input
+                      value={usernameValue}
+                      onChange={(e) => handleUsernameChange(e.target.value)}
+                      autoFocus
+                      placeholder={user?.username || "yourhandle"}
+                      onKeyDown={(e) => { if (e.key === "Enter") handleSaveUsername(); if (e.key === "Escape") { setUsernameEditing(false); setUsernameValue(user?.username || ""); setUsernameStatus("idle"); } }}
+                      style={{ background: "var(--surface-mid)", border: `1px solid ${usernameStatus === "taken" || usernameStatus === "invalid" ? "var(--permanent-live)" : "var(--border-default)"}`, borderRadius: "8px", padding: "8px 12px", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-primary)", outline: "none", width: "140px" }}
+                    />
+                    <UsernameIndicator />
+                  </div>
+                  <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)", margin: 0 }}>
+                    You can change this once every 14 days.
+                  </p>
+                  {usernameError && <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--permanent-live)", margin: 0 }}>{usernameError}</p>}
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    <button
+                      onClick={() => { setUsernameEditing(false); setUsernameValue(user?.username || ""); setUsernameStatus("idle"); setUsernameError(""); }}
+                      style={{ background: "transparent", border: "1px solid var(--border-default)", borderRadius: "6px", padding: "6px 10px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--text-muted)" }}>
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveUsername}
+                      disabled={usernameSaving || usernameStatus !== "available"}
+                      style={{ background: usernameStatus === "available" ? "var(--permanent-gold)" : "var(--surface-mid)", border: "none", borderRadius: "6px", padding: "6px 12px", cursor: usernameSaving || usernameStatus !== "available" ? "not-allowed" : "pointer", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 600, color: usernameStatus === "available" ? "white" : "var(--text-muted)", opacity: usernameSaving ? 0.6 : 1 }}>
+                      {usernameSaving ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <OutlineButton
+                  disabled={!!cooldownUntil}
+                  onClick={() => { if (!cooldownUntil) { setUsernameEditing(true); setUsernameError(""); setUsernameStatus("idle"); } }}
+                >
+                  {cooldownUntil ? "Locked" : "Edit"}
                 </OutlineButton>
               )
             }
           />
 
+          {/* Email */}
           <SettingsRow
             topBorder label="Email" sub={user?.email || ""}
             right={
-              <span style={{
-                fontFamily: "'Inter', sans-serif", fontSize: "11px",
-                color: "var(--text-muted)",
-                background: "var(--surface-mid)",
-                border: "1px solid var(--border-default)",
-                borderRadius: "4px", padding: "2px 7px",
-              }}>
-                {user?.provider
-                  ? user.provider.charAt(0).toUpperCase() + user.provider.slice(1)
-                  : "—"}
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)", background: "var(--surface-mid)", border: "1px solid var(--border-default)", borderRadius: "4px", padding: "2px 7px" }}>
+                {user?.provider ? user.provider.charAt(0).toUpperCase() + user.provider.slice(1) : "—"}
               </span>
             }
           />
@@ -354,19 +441,8 @@ export default function SettingsPage() {
                 <button
                   onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                   aria-label="Toggle theme"
-                  style={{
-                    position: "relative", width: "44px", height: "24px",
-                    borderRadius: "12px",
-                    background: theme === "dark" ? "var(--permanent-gold)" : "var(--border-strong)",
-                    border: "none", cursor: "pointer",
-                    transition: "background 0.2s", padding: 0,
-                  }}>
-                  <span style={{
-                    position: "absolute", top: "3px",
-                    left: theme === "dark" ? "23px" : "3px",
-                    width: "18px", height: "18px", borderRadius: "50%",
-                    background: "white", transition: "left 0.2s", display: "block",
-                  }} />
+                  style={{ position: "relative", width: "44px", height: "24px", borderRadius: "12px", background: theme === "dark" ? "var(--permanent-gold)" : "var(--border-strong)", border: "none", cursor: "pointer", transition: "background 0.2s", padding: 0 }}>
+                  <span style={{ position: "absolute", top: "3px", left: theme === "dark" ? "23px" : "3px", width: "18px", height: "18px", borderRadius: "50%", background: "white", transition: "left 0.2s", display: "block" }} />
                 </button>
               )
             }
@@ -381,11 +457,7 @@ export default function SettingsPage() {
             { label: "Someone responds to your experience",     sub: "Conversations that start with what you shared." },
             { label: "Weekly digest",                           sub: "A summary of what was shared that week." },
           ].map((item, i) => (
-            <SettingsRow
-              key={item.label} topBorder={i > 0}
-              label={item.label} sub={item.sub}
-              right={<SoonBadge />}
-            />
+            <SettingsRow key={item.label} topBorder={i > 0} label={item.label} sub={item.sub} right={<SoonBadge />} />
           ))}
         </SettingsCard>
 
@@ -405,45 +477,22 @@ export default function SettingsPage() {
             topBorder danger
             label="Delete account"
             sub="Removes your account and everything you have shared. This cannot be undone."
-            right={
-              <OutlineButton danger onClick={() => setDeleteStage("confirm")}>
-                Delete
-              </OutlineButton>
-            }
+            right={<OutlineButton danger onClick={() => setDeleteStage("confirm")}>Delete</OutlineButton>}
           />
         </SettingsCard>
       </div>
 
       {/* ── DELETE CONFIRM OVERLAY ── */}
       {(deleteStage === "confirm" || deleteStage === "deleting") && (
-        <div style={{
-          position: "fixed", inset: 0, zIndex: 300,
-          background: "rgba(15,14,12,0.88)",
-          display: "flex", alignItems: "center", justifyContent: "center", padding: "24px",
-        }}>
-          <div style={{
-            background: "var(--surface-card)",
-            border: "1px solid var(--border-default)",
-            borderRadius: "14px", padding: "32px 24px",
-            maxWidth: "380px", width: "100%", textAlign: "center",
-          }}>
-            <p style={{
-              fontFamily: "'Cormorant Garamond', serif", fontSize: "22px",
-              fontWeight: 300, color: "var(--text-primary)", marginBottom: "12px",
-            }}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(15,14,12,0.88)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
+          <div style={{ background: "var(--surface-card)", border: "1px solid var(--border-default)", borderRadius: "14px", padding: "32px 24px", maxWidth: "380px", width: "100%", textAlign: "center" }}>
+            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "22px", fontWeight: 300, color: "var(--text-primary)", marginBottom: "12px" }}>
               Delete your account?
             </p>
-            <p style={{
-              fontFamily: "'Inter', sans-serif", fontSize: "13px",
-              color: "var(--text-muted)", marginBottom: "24px", lineHeight: 1.6,
-            }}>
-              This removes your account and every experience you have shared.
-              No one will be able to read them anymore. It cannot be undone.
+            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)", marginBottom: "24px", lineHeight: 1.6 }}>
+              This removes your account and every experience you have shared. No one will be able to read them anymore. It cannot be undone.
             </p>
-            <p style={{
-              fontFamily: "'Inter', sans-serif", fontSize: "12px",
-              color: "var(--text-muted)", marginBottom: "8px",
-            }}>
+            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--text-muted)", marginBottom: "8px" }}>
               Type <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>delete</strong> to confirm.
             </p>
             <input
@@ -451,21 +500,9 @@ export default function SettingsPage() {
               onChange={(e) => setDeleteInput(e.target.value)}
               placeholder="delete"
               disabled={deleteStage === "deleting"}
-              style={{
-                width: "100%",
-                background: "var(--surface-mid)",
-                border: "1px solid var(--border-strong)",
-                borderRadius: "8px", padding: "10px 12px",
-                fontFamily: "'Inter', sans-serif", fontSize: "13px",
-                color: "var(--text-primary)", outline: "none",
-                boxSizing: "border-box", marginBottom: "16px", textAlign: "center",
-              }}
+              style={{ width: "100%", background: "var(--surface-mid)", border: "1px solid var(--border-strong)", borderRadius: "8px", padding: "10px 12px", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-primary)", outline: "none", boxSizing: "border-box", marginBottom: "16px", textAlign: "center" }}
             />
-            {deleteError && (
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--permanent-live)", marginBottom: "12px" }}>
-                {deleteError}
-              </p>
-            )}
+            {deleteError && <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--permanent-live)", marginBottom: "12px" }}>{deleteError}</p>}
             <div style={{ display: "flex", gap: "10px" }}>
               <button
                 onClick={() => { setDeleteStage("idle"); setDeleteInput(""); setDeleteError(""); }}
@@ -476,15 +513,7 @@ export default function SettingsPage() {
               <button
                 onClick={handleDeleteAccount}
                 disabled={deleteInput.trim().toLowerCase() !== "delete" || deleteStage === "deleting"}
-                style={{
-                  flex: 1,
-                  background: deleteInput.trim().toLowerCase() === "delete" ? "var(--permanent-live)" : "var(--surface-mid)",
-                  border: "none", borderRadius: "8px", padding: "12px",
-                  cursor: deleteInput.trim().toLowerCase() === "delete" && deleteStage !== "deleting" ? "pointer" : "not-allowed",
-                  fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600,
-                  color: deleteInput.trim().toLowerCase() === "delete" ? "white" : "var(--text-muted)",
-                  transition: "all 0.2s",
-                }}>
+                style={{ flex: 1, background: deleteInput.trim().toLowerCase() === "delete" ? "var(--permanent-live)" : "var(--surface-mid)", border: "none", borderRadius: "8px", padding: "12px", cursor: deleteInput.trim().toLowerCase() === "delete" && deleteStage !== "deleting" ? "pointer" : "not-allowed", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: deleteInput.trim().toLowerCase() === "delete" ? "white" : "var(--text-muted)", transition: "all 0.2s" }}>
                 {deleteStage === "deleting" ? "Deleting..." : "Yes, delete it"}
               </button>
             </div>

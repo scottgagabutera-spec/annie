@@ -75,6 +75,10 @@ export async function saveDraftToSupabase(exp: NewExperience & { id?: string }):
 }
 
 // ─── Feed queries ─────────────────────────────────────────────────────────────
+// author_username is joined live from profiles so it always reflects the
+// current handle, never a stale snapshot from publish time.
+// Giants Way: Twitter/Instagram/Threads always show current handle on posts.
+// Long term: no migration needed if someone changes their username.
 
 export type FeedExperience = {
   id:                   string;
@@ -91,6 +95,7 @@ export type FeedExperience = {
   created_at:           string;
   profile_id:           string;
   display_name:         string | null;
+  author_username:      string | null; // joined live from profiles
   image_urls:           string[];
   video_url:            string | null;
   is_edited:            boolean;
@@ -98,9 +103,16 @@ export type FeedExperience = {
 };
 
 export async function getFeedExperiences(category?: string): Promise<FeedExperience[]> {
+  // Join profiles to get username live — never rely on stale snapshot data.
+  // Supabase foreign key join: experiences.profile_id → profiles.id
   let query = supabase
     .from("experiences")
-    .select("*")
+    .select(`
+      *,
+      profiles!experiences_profile_id_fkey (
+        username
+      )
+    `)
     .eq("published", true)
     .order("created_at", { ascending: false })
     .limit(20);
@@ -111,19 +123,35 @@ export async function getFeedExperiences(category?: string): Promise<FeedExperie
 
   const { data, error } = await query;
   if (error) return [];
-  return data as FeedExperience[];
+
+  // Flatten the joined profile data into the experience row
+  return (data as any[]).map((row) => ({
+    ...row,
+    author_username: row.profiles?.username || null,
+    profiles: undefined,
+  })) as FeedExperience[];
 }
 
 export async function getExperienceById(id: string): Promise<FeedExperience | null> {
   const { data, error } = await supabase
     .from("experiences")
-    .select("*")
+    .select(`
+      *,
+      profiles!experiences_profile_id_fkey (
+        username
+      )
+    `)
     .eq("id", id)
     .eq("published", true)
     .single();
 
   if (error || !data) return null;
-  return data as FeedExperience;
+
+  return {
+    ...(data as any),
+    author_username: (data as any).profiles?.username || null,
+    profiles: undefined,
+  } as FeedExperience;
 }
 
 // includeAnonymous defaults to false because this function is shared by both
@@ -139,7 +167,12 @@ export async function getExperiencesByProfile(
 ): Promise<FeedExperience[]> {
   let query = supabase
     .from("experiences")
-    .select("*")
+    .select(`
+      *,
+      profiles!experiences_profile_id_fkey (
+        username
+      )
+    `)
     .eq("profile_id", profileId)
     .eq("published", true)
     .order("created_at", { ascending: false });
@@ -150,7 +183,12 @@ export async function getExperiencesByProfile(
 
   const { data, error } = await query;
   if (error) return [];
-  return data as FeedExperience[];
+
+  return (data as any[]).map((row) => ({
+    ...row,
+    author_username: row.profiles?.username || null,
+    profiles: undefined,
+  })) as FeedExperience[];
 }
 
 // ─── Public profiles ───────────────────────────────────────────────────────
@@ -163,6 +201,7 @@ export type PublicProfile = {
   full_name:              string | null;
   avatar_url:             string | null;
   bio:                    string | null;
+  username:               string | null; // added — needed for profile pages and @handle display
   is_verified:            boolean;
   is_guide:               boolean;
   carried_forward_count:  number;
@@ -171,7 +210,7 @@ export type PublicProfile = {
 export async function getProfileById(profileId: string): Promise<PublicProfile | null> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, avatar_url, bio, is_verified, is_guide, carried_forward_count")
+    .select("id, full_name, avatar_url, bio, username, is_verified, is_guide, carried_forward_count")
     .eq("id", profileId)
     .single();
 
@@ -292,8 +331,6 @@ export function parseVideoUrl(rawUrl: string): ParsedVideo | null {
       platform: "vimeo",
       id,
       embedUrl: `https://player.vimeo.com/video/${id}`,
-      // Vimeo thumbnails need an API call to fetch properly; using the
-      // player itself as the visual is the simplest reliable option for now.
       thumbnailUrl: "",
     };
   }

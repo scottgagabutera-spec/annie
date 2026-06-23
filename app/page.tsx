@@ -42,7 +42,6 @@ export default function Home() {
     getCurrentUser().then((u) => {
       setUser(u);
       checkPendingPublish(u);
-      // Show profile setup modal if user hasn't completed profile
       if (u && !u.hasCompletedProfile) {
         setShowProfileSetup(true);
       }
@@ -98,7 +97,6 @@ export default function Home() {
         user={user}
         onDone={() => {
           setShowProfileSetup(false);
-          // Refresh user to get updated profile
           getCurrentUser().then(setUser);
         }}
       />
@@ -342,6 +340,7 @@ export default function Home() {
                 category={exp.category.charAt(0).toUpperCase() + exp.category.slice(1)}
                 authorInitial={initial}
                 authorName={name}
+                authorUsername={exp.is_anonymous ? null : (exp.author_username || null)}
                 title={exp.title}
                 excerpt={excerpt}
                 carriedCount={exp.carried_forward_count}
