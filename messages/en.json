@@ -46,5 +46,11 @@
   },
   "theme": {
     "toggle_label": "Toggle theme"
+  },
+  "welcome": {
+    "title": "Welcome to Annie, {name}.",
+    "body": "Real experiences, real people. Read freely, and share whenever something is worth saying.",
+    "newsletter_label": "Send me occasional emails about new features and experiences worth reading.",
+    "cta": "Start exploring"
   }
 }

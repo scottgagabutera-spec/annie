@@ -214,7 +214,7 @@ export default function SlideMenu({ open, user, theme, mounted, onClose, onSignI
             <button
               onClick={onSignIn}
               style={{ width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", padding: "10px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.7)" }}>
-              Sign in with Google
+              Sign in
             </button>
           </>
         )}

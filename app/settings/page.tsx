@@ -335,7 +335,9 @@ export default function SettingsPage() {
                 border: "1px solid var(--border-default)",
                 borderRadius: "4px", padding: "2px 7px",
               }}>
-                Google
+                {user?.provider
+                  ? user.provider.charAt(0).toUpperCase() + user.provider.slice(1)
+                  : "—"}
               </span>
             }
           />
@@ -392,7 +394,7 @@ export default function SettingsPage() {
         <SettingsCard>
           <SettingsRow
             label="Sign out"
-            sub="You can always sign back in with Google."
+            sub="You can always sign back in."
             right={
               <OutlineButton onClick={async () => { await signOut(); window.location.href = "/"; }}>
                 Sign out

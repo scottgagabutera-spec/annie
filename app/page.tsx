@@ -11,6 +11,7 @@ import Nav from "../components/Nav";
 import SlideMenu from "../components/SlideMenu";
 import ShareFlow, { PENDING_PUBLISH_KEY } from "../components/ShareFlow";
 import ExperienceCard from "../components/ExperienceCard";
+import WelcomeModal from "../components/WelcomeModal";
 
 export default function Home() {
   const { theme, setTheme } = useTheme();
@@ -22,6 +23,7 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState("individual");
   const [experiences, setExperiences]       = useState<FeedExperience[]>([]);
   const [feedLoading, setFeedLoading]       = useState(true);
+  const [showWelcome, setShowWelcome]       = useState(false);
 
   const checkPendingPublish = (signedInUser: AnnieUser | null) => {
     if (!signedInUser) return;
@@ -37,7 +39,11 @@ export default function Home() {
 
   useEffect(() => {
     setMounted(true);
-    getCurrentUser().then((u) => { setUser(u); checkPendingPublish(u); });
+    getCurrentUser().then((u) => {
+      setUser(u);
+      checkPendingPublish(u);
+      if (u && !u.hasSeenWelcome) setShowWelcome(true);
+    });
     const unsub = onAuthChange((u) => { setUser(u); checkPendingPublish(u); });
     return unsub;
   }, []);
@@ -343,6 +349,13 @@ export default function Home() {
         onPublished={loadFeed}
         resumeDraft={resumePublish}
       />
+
+      {showWelcome && user && (
+        <WelcomeModal
+          user={user}
+          onDone={() => setShowWelcome(false)}
+        />
+      )}
 
       <style>{`
         @media (max-width: 640px) {
