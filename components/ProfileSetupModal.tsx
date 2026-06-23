@@ -28,7 +28,7 @@ const ALLOWED_IMG_TYPES = ["image/jpeg", "image/png", "image/webp"];
 export default function ProfileSetupModal({ user, onDone }: Props) {
   const t = useTranslations("profileSetup");
   const avatarInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [newsletterChecked, setNewsletterChecked] = useState(false);
   const [displayName, setDisplayName] = useState(user.name);
   const [username, setUsername] = useState(generateUsernameFromName(user.name));
@@ -36,35 +36,35 @@ export default function ProfileSetupModal({ user, onDone }: Props) {
   const [avatarPreview, setAvatarPreview] = useState(user.avatar);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  
+
   // Debounced username availability check
-  const debounceTimer = useRef<NodeJS.Timeout>();
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const checkUsername = useCallback(async (value: string) => {
     if (!value || value.length < 3) {
       setUsernameStatus("idle");
       return;
     }
-    
-    clearTimeout(debounceTimer.current);
+
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
     setUsernameStatus("checking");
-    
+
     debounceTimer.current = setTimeout(async () => {
       const available = await checkUsernameAvailable(value);
       setUsernameStatus(available ? "available" : "taken");
     }, 300);
   }, []);
-  
+
   const handleUsernameChange = (value: string) => {
     const cleaned = value.toLowerCase().replace(/[^a-z0-9_]/g, "");
     setUsername(cleaned);
     checkUsername(cleaned);
   };
-  
+
   const handleAvatarSelect = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    
+
     if (!ALLOWED_IMG_TYPES.includes(file.type)) {
       setError("Use JPG, PNG, or WEBP");
       return;
@@ -73,7 +73,7 @@ export default function ProfileSetupModal({ user, onDone }: Props) {
       setError("Keep it under 5MB");
       return;
     }
-    
+
     setError("");
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -81,32 +81,32 @@ export default function ProfileSetupModal({ user, onDone }: Props) {
     };
     reader.readAsDataURL(file);
   };
-  
+
   const handleComplete = async () => {
     if (usernameStatus !== "available") {
       setError(t("username_taken"));
       return;
     }
-    
+
     setSaving(true);
     setError("");
-    
+
     let finalAvatarUrl = avatarPreview;
-    
+
     // Upload new avatar if changed
-    if (avatarPreview && avatarPreview !== user.avatar && !avatarPreview.startsWith("data:")) {
-      const result = await uploadAvatar(
-        avatarInputRef.current?.files?.[0]!,
-        user.id
-      );
-      if (!result.ok) {
-        setError("Photo upload failed");
-        setSaving(false);
-        return;
+    if (avatarPreview && avatarPreview !== user.avatar && avatarPreview.startsWith("data:")) {
+      const file = avatarInputRef.current?.files?.[0];
+      if (file) {
+        const result = await uploadAvatar(file, user.id);
+        if (!result.ok) {
+          setError("Photo upload failed");
+          setSaving(false);
+          return;
+        }
+        finalAvatarUrl = result.url;
       }
-      finalAvatarUrl = result.url;
     }
-    
+
     // Save profile
     const result = await completeProfile(
       user.id,
@@ -114,13 +114,13 @@ export default function ProfileSetupModal({ user, onDone }: Props) {
       username,
       newsletterChecked
     );
-    
+
     if (!result.ok) {
       setError(result.error || "Something went wrong");
       setSaving(false);
       return;
     }
-    
+
     setSaving(false);
     onDone();
   };
@@ -151,7 +151,6 @@ export default function ProfileSetupModal({ user, onDone }: Props) {
           fontSize: "24px",
           fontWeight: 300,
           color: "var(--text-primary)",
-          marginBottom: "24px",
           lineHeight: 1.3,
           margin: "0 0 24px 0",
         }}>
@@ -223,7 +222,6 @@ export default function ProfileSetupModal({ user, onDone }: Props) {
             fontFamily: "'Inter', sans-serif",
             fontSize: "11px",
             color: "var(--text-muted)",
-            marginTop: "4px",
             margin: "4px 0 0 0",
           }}>
             {t("displayName_help")}
@@ -317,7 +315,6 @@ export default function ProfileSetupModal({ user, onDone }: Props) {
             fontSize: "12px",
             fontWeight: 600,
             color: "var(--text-primary)",
-            marginBottom: "12px",
             margin: "0 0 12px 0",
           }}>
             {t("photo_label")} <span style={{ color: "var(--text-muted)" }}>{t("photo_optional")}</span>
@@ -389,7 +386,6 @@ export default function ProfileSetupModal({ user, onDone }: Props) {
             fontFamily: "'Inter', sans-serif",
             fontSize: "12px",
             color: "var(--permanent-live)",
-            marginBottom: "12px",
             margin: "0 0 12px 0",
           }}>
             {error}
