@@ -52,5 +52,21 @@
     "body": "Des expériences vraies, des gens vrais. Lisez librement, et partagez dès que quelque chose mérite d'être dit.",
     "newsletter_label": "M'envoyer occasionnellement des emails sur les nouvelles fonctionnalités et les expériences à lire.",
     "cta": "Commencer à explorer"
+  },
+  "profileSetup": {
+    "title": "Complétez votre profil",
+    "displayName_label": "Nom d'affichage",
+    "displayName_help": "Affiché à côté des expériences que vous partagez.",
+    "username_label": "@nom d'utilisateur",
+    "username_help": "Vous pouvez changer une fois tous les 14 jours.",
+    "username_available": "Disponible",
+    "username_taken": "Pris, essayez un autre",
+    "username_invalid": "3–20 caractères, lettres, chiffres, tiret bas seulement",
+    "username_cooldown": "Vous pouvez changer à nouveau le {date}",
+    "photo_label": "Ajouter une photo de profil ?",
+    "photo_optional": "(optionnel)",
+    "photo_upload": "Télécharger",
+    "photo_skip": "Passer",
+    "cta": "Terminer"
   }
 }

@@ -11,7 +11,7 @@ import Nav from "../components/Nav";
 import SlideMenu from "../components/SlideMenu";
 import ShareFlow, { PENDING_PUBLISH_KEY } from "../components/ShareFlow";
 import ExperienceCard from "../components/ExperienceCard";
-import WelcomeModal from "../components/WelcomeModal";
+import ProfileSetupModal from "../components/ProfileSetupModal";
 
 export default function Home() {
   const { theme, setTheme } = useTheme();
@@ -23,7 +23,7 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState("individual");
   const [experiences, setExperiences]       = useState<FeedExperience[]>([]);
   const [feedLoading, setFeedLoading]       = useState(true);
-  const [showWelcome, setShowWelcome]       = useState(false);
+  const [showProfileSetup, setShowProfileSetup] = useState(false);
 
   const checkPendingPublish = (signedInUser: AnnieUser | null) => {
     if (!signedInUser) return;
@@ -42,7 +42,10 @@ export default function Home() {
     getCurrentUser().then((u) => {
       setUser(u);
       checkPendingPublish(u);
-      if (u && !u.hasSeenWelcome) setShowWelcome(true);
+      // Show profile setup modal if user hasn't completed profile
+      if (u && !u.hasCompletedProfile) {
+        setShowProfileSetup(true);
+      }
     });
     const unsub = onAuthChange((u) => { setUser(u); checkPendingPublish(u); });
     return unsub;
@@ -87,6 +90,20 @@ export default function Home() {
     setActiveCategory("individual");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // Block UI until profile is set up
+  if (showProfileSetup && user) {
+    return (
+      <ProfileSetupModal
+        user={user}
+        onDone={() => {
+          setShowProfileSetup(false);
+          // Refresh user to get updated profile
+          getCurrentUser().then(setUser);
+        }}
+      />
+    );
+  }
 
   return (
     <>
@@ -349,13 +366,6 @@ export default function Home() {
         onPublished={loadFeed}
         resumeDraft={resumePublish}
       />
-
-      {showWelcome && user && (
-        <WelcomeModal
-          user={user}
-          onDone={() => setShowWelcome(false)}
-        />
-      )}
 
       <style>{`
         @media (max-width: 640px) {

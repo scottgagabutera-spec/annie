@@ -52,5 +52,21 @@
     "body": "Real experiences, real people. Read freely, and share whenever something is worth saying.",
     "newsletter_label": "Send me occasional emails about new features and experiences worth reading.",
     "cta": "Start exploring"
+  },
+  "profileSetup": {
+    "title": "Complete your profile",
+    "displayName_label": "Display name",
+    "displayName_help": "Shown next to experiences you share.",
+    "username_label": "@username",
+    "username_help": "You can change once every 14 days.",
+    "username_available": "Available",
+    "username_taken": "Taken, try another",
+    "username_invalid": "3–20 characters, letters, numbers, underscore only",
+    "username_cooldown": "You can change again on {date}",
+    "photo_label": "Add a profile photo?",
+    "photo_optional": "(optional)",
+    "photo_upload": "Upload",
+    "photo_skip": "Skip",
+    "cta": "Complete"
   }
 }
