@@ -24,7 +24,6 @@ function sessionToUser(session: any, profile?: any): AnnieUser | null {
     id: u.id,
     name: u.user_metadata?.full_name || u.email?.split("@")[0] || "You",
     email: u.email || "",
-    // Prefer profiles.avatar_url (uploaded photo) over Google's metadata URL
     avatar: profile?.avatar_url || u.user_metadata?.avatar_url || "",
     provider: u.app_metadata?.provider || "unknown",
     username: profile?.username || "",
@@ -49,8 +48,16 @@ export async function getCurrentUser(): Promise<AnnieUser | null> {
 }
 
 export function onAuthChange(callback: (user: AnnieUser | null) => void) {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-    callback(sessionToUser(session));
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    if (!session?.user) { callback(null); return; }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username, username_changed_at, has_seen_welcome, has_completed_profile, newsletter_opted_in, avatar_url")
+      .eq("id", session.user.id)
+      .single();
+
+    callback(sessionToUser(session, profile));
   });
   return () => subscription.unsubscribe();
 }
@@ -65,8 +72,6 @@ export async function signInWithGoogle(redirectOrigin: string) {
 export async function signOut() {
   await supabase.auth.signOut();
 }
-
-// ─── Username Management ──────────────────────────────────────────────────────
 
 export async function checkUsernameAvailable(username: string): Promise<boolean> {
   if (!isValidUsernameFormat(username)) return false;
@@ -116,7 +121,7 @@ export async function updateUsername(
   newUsername: string
 ): Promise<{ ok: boolean; error?: string }> {
   if (!isValidUsernameFormat(newUsername)) {
-    return { ok: false, error: "3–20 characters, letters, numbers, underscore only" };
+    return { ok: false, error: "3 to 20 characters, letters, numbers, underscore only" };
   }
 
   const canChangeAt = await getCanChangeUsernameAt(userId);
@@ -171,8 +176,6 @@ export async function completeProfile(
   return { ok: true };
 }
 
-// ─── Update display name ──────────────────────────────────────────────────────
-
 export async function updateDisplayName(name: string): Promise<{ ok: boolean; error?: string }> {
   const { error } = await supabase.auth.updateUser({
     data: { full_name: name.trim() },
@@ -180,11 +183,6 @@ export async function updateDisplayName(name: string): Promise<{ ok: boolean; er
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
-
-// ─── Avatar upload ────────────────────────────────────────────────────────────
-// Fix: saves URL to BOTH auth metadata AND profiles.avatar_url.
-// Previously only saved to auth metadata — profiles join never saw it.
-// Giants Way: nav uses auth metadata (fast), feed cards use profiles.avatar_url (live join).
 
 export type AvatarUploadResult =
   | { ok: true;  url: string }
@@ -203,13 +201,11 @@ export async function uploadAvatar(file: File, userId: string): Promise<AvatarUp
   const { data } = supabase.storage.from("avatars").getPublicUrl(path);
   const publicUrl = data.publicUrl;
 
-  // Save to auth metadata (used by nav/session)
   const { error: metaError } = await supabase.auth.updateUser({
     data: { avatar_url: publicUrl },
   });
   if (metaError) return { ok: false, error: metaError.message };
 
-  // Save to profiles table (used by feed card join)
   const { error: profileError } = await supabase
     .from("profiles")
     .update({ avatar_url: publicUrl })
@@ -220,8 +216,6 @@ export async function uploadAvatar(file: File, userId: string): Promise<AvatarUp
   return { ok: true, url: publicUrl };
 }
 
-// ─── Mark welcome modal as seen ───────────────────────────────────────────────
-
 export async function markWelcomeSeen(userId: string, newsletterOptedIn: boolean): Promise<{ ok: boolean; error?: string }> {
   const { error } = await supabase
     .from("profiles")
@@ -231,8 +225,6 @@ export async function markWelcomeSeen(userId: string, newsletterOptedIn: boolean
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
-
-// ─── Delete account ───────────────────────────────────────────────────────────
 
 export async function deleteAccount(userId: string): Promise<{ ok: boolean; error?: string }> {
   const { data: experiences } = await supabase
