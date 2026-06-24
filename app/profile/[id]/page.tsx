@@ -210,6 +210,7 @@ export default function ProfilePage() {
                   href={`/experience/${exp.id}`}
                   style={{ textDecoration: "none", color: "inherit", display: "block", marginBottom: "24px" }}>
                   <ExperienceCard
+                    id={exp.id}
                     profileId={profileId}
                     pullQuote={exp.pull_quote || excerpt}
                     category={exp.category.charAt(0).toUpperCase() + exp.category.slice(1)}
@@ -219,10 +220,11 @@ export default function ProfilePage() {
                     authorAvatar={profile?.avatar_url || null}
                     title={exp.title}
                     excerpt={excerpt}
-                    carriedCount={exp.carried_forward_count}
+                    reactionCounts={{}}
                     responseCount={exp.response_count}
                     readTime={exp.read_time_minutes}
                     isLive={exp.is_live}
+                    isSignedIn={!!currentUser}
                     mediaType={hasPhotos ? "image" : (exp.video_url ? "video" : "none")}
                     mediaUrl={hasPhotos ? exp.image_urls[0] : (exp.video_url || undefined)}
                     imageUrls={exp.image_urls}
