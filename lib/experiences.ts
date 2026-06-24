@@ -3,6 +3,7 @@
 // Web and future React Native app import from here — no Supabase calls scattered in components.
 
 import { supabase } from "./supabase";
+import type { ReactionType, ReactionCounts } from "../components/ReactionBar";
 
 export type NewExperience = {
   profile_id:        string;
@@ -98,12 +99,6 @@ export type FeedExperience = {
   edited_at:             string | null;
 };
 
-// All three public-facing reads below query `public_experiences` — a Postgres
-// view that masks profile_id, author_name, author_username, and author_avatar_url
-// to null whenever is_anonymous = true. This is enforced at the database level,
-// not just hidden in the UI, so an "anonymous" post never leaks the real author's
-// identity over the network even via direct API inspection.
-
 export async function getFeedExperiences(category?: string): Promise<FeedExperience[]> {
   let query = supabase
     .from("public_experiences")
@@ -176,15 +171,15 @@ export async function carryForward(id: string): Promise<boolean> {
 // ─── Responses ────────────────────────────────────────────────────────────────
 
 export type Response = {
-  id:               string;
-  experience_id:    string;
-  profile_id:       string;
-  content:          string;
-  created_at:       string;
-  is_edited:        boolean;
-  edited_at:        string | null;
-  author_name:      string | null;
-  author_username:  string | null;
+  id:                string;
+  experience_id:     string;
+  profile_id:        string;
+  content:           string;
+  created_at:        string;
+  is_edited:         boolean;
+  edited_at:         string | null;
+  author_name:       string | null;
+  author_username:   string | null;
   author_avatar_url: string | null;
 };
 
@@ -219,6 +214,45 @@ export async function deleteResponse(responseId: string): Promise<{ ok: boolean;
 
   if (error) return { ok: false, error: error.message };
   return { ok: true };
+}
+
+// ─── Reactions ────────────────────────────────────────────────────────────────
+
+export async function getReactionCounts(experienceId: string): Promise<ReactionCounts> {
+  const { data, error } = await supabase
+    .from("reaction_counts")
+    .select("reaction_type, count")
+    .eq("experience_id", experienceId);
+
+  if (error || !data) return {};
+
+  return data.reduce<ReactionCounts>((acc, row) => {
+    acc[row.reaction_type as ReactionType] = Number(row.count);
+    return acc;
+  }, {});
+}
+
+export async function getUserReaction(experienceId: string, userId: string): Promise<ReactionType | null> {
+  const { data, error } = await supabase
+    .from("reactions")
+    .select("reaction_type")
+    .eq("experience_id", experienceId)
+    .eq("profile_id", userId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data.reaction_type as ReactionType;
+}
+
+export async function upsertReaction(
+  experienceId: string,
+  reactionType: ReactionType | null
+): Promise<{ ok: boolean }> {
+  const { error } = await supabase.rpc("upsert_reaction", {
+    p_experience_id: experienceId,
+    p_reaction_type: reactionType,
+  });
+  return { ok: !error };
 }
 
 // ─── Experience editing ───────────────────────────────────────────────────────

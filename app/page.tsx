@@ -87,9 +87,6 @@ export default function Home() {
     setSigningIn(true);
     try {
       await signInWithGoogle(window.location.origin);
-      // On success the browser redirects to Google, so this rarely resolves
-      // back here — but if it fails (offline, blocked popup, etc.) we still
-      // need to clear the loading state instead of leaving the button stuck.
     } finally {
       setSigningIn(false);
     }
@@ -273,10 +270,11 @@ export default function Home() {
                 authorAvatar={exp.is_anonymous ? null : (exp.author_avatar_url || null)}
                 title={exp.title}
                 excerpt={excerpt}
-                carriedCount={exp.carried_forward_count}
+                reactionCounts={{}}
                 responseCount={exp.response_count}
                 readTime={exp.read_time_minutes}
                 isLive={exp.is_live}
+                isSignedIn={!!user}
                 mediaType={hasPhotos ? "image" : (exp.video_url ? "video" : "none")}
                 mediaUrl={hasPhotos ? exp.image_urls[0] : (exp.video_url || undefined)}
                 imageUrls={exp.image_urls}

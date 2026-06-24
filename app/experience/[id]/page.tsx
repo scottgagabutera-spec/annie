@@ -1,18 +1,20 @@
 "use client";
 // app/experience/[id]/page.tsx
-// Reading page: author → title → media → body → pull quote → footer → responses.
+// Reading page: author → title → media → body → pull quote → footer → reactions → reflections.
 // Giants Way: author clickable to profile, three dot menu for owner actions.
-// All 11 statements. Zero hardcoded colors.
+// All 9 statements. Zero hardcoded colors.
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  getExperienceById, carryForward, updateExperience, deleteExperience,
+  getExperienceById, updateExperience, deleteExperience,
   uploadExperienceImage, parseVideoUrl, FeedExperience, FREE_PHOTO_LIMIT,
   getResponsesForExperience, postResponse, deleteResponse, Response,
+  getReactionCounts, getUserReaction, upsertReaction,
 } from "../../../lib/experiences";
 import { getCurrentUser, AnnieUser } from "../../../lib/auth";
+import ReactionBar, { ReactionType, ReactionCounts } from "../../../components/ReactionBar";
 
 const MAX_IMAGE_BYTES   = 5 * 1024 * 1024;
 const ALLOWED_IMG_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -21,26 +23,19 @@ function formatCategory(cat: string) {
   return cat.charAt(0).toUpperCase() + cat.slice(1);
 }
 
-// AUTHOR AVATAR
+// ─── AUTHOR AVATAR ────────────────────────────────────────────────────────────
 
 function AuthorAvatar({ url, initial, size = 38 }: { url: string | null; initial: string; size?: number }) {
   const [err, setErr] = useState(false);
-
   if (url && !err) {
     return (
-      <img
-        src={url}
-        alt=""
-        onError={() => setErr(true)}
-        style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0, display: "block" }}
-      />
+      <img src={url} alt="" onError={() => setErr(true)}
+        style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0, display: "block" }} />
     );
   }
-
   return (
     <div style={{
-      width: size, height: size, borderRadius: "50%",
-      background: "var(--gold-soft)",
+      width: size, height: size, borderRadius: "50%", background: "var(--gold-soft)",
       display: "flex", alignItems: "center", justifyContent: "center",
       fontFamily: "'Cormorant Garamond', serif", fontSize: "16px",
       fontWeight: 600, color: "var(--permanent-gold)", flexShrink: 0,
@@ -50,7 +45,7 @@ function AuthorAvatar({ url, initial, size = 38 }: { url: string | null; initial
   );
 }
 
-// PHOTO CAROUSEL
+// ─── PHOTO CAROUSEL ───────────────────────────────────────────────────────────
 
 function ReadingPhotoCarousel({ urls }: { urls: string[] }) {
   const [index, setIndex] = useState(0);
@@ -67,7 +62,6 @@ function ReadingPhotoCarousel({ urls }: { urls: string[] }) {
   };
 
   if (urls.length === 0) return null;
-
   if (urls.length === 1) {
     return (
       <div style={{ width: "100%" }}>
@@ -109,7 +103,7 @@ function ReadingPhotoCarousel({ urls }: { urls: string[] }) {
   );
 }
 
-// VIDEO EMBED
+// ─── VIDEO EMBED ──────────────────────────────────────────────────────────────
 
 function ReadingVideo({ url }: { url: string }) {
   const [playing, setPlaying] = useState(false);
@@ -139,16 +133,13 @@ function ReadingVideo({ url }: { url: string }) {
   );
 }
 
-// THREE DOT MENU for owner actions
+// ─── OWNER MENU ───────────────────────────────────────────────────────────────
 
 function OwnerMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
   const [open, setOpen] = useState(false);
-
   return (
     <div style={{ position: "relative" }}>
-      <button
-        onClick={() => setOpen((s) => !s)}
-        aria-label="More options"
+      <button onClick={() => setOpen((s) => !s)} aria-label="More options"
         style={{ background: "transparent", border: "none", cursor: "pointer", padding: "6px 8px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "6px" }}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--text-muted)" stroke="none">
           <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
@@ -158,8 +149,7 @@ function OwnerMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => v
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
           <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, background: "var(--surface-card)", border: "1px solid var(--border-default)", borderRadius: "10px", overflow: "hidden", zIndex: 100, minWidth: "140px", boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }}>
-            <button
-              onClick={() => { setOpen(false); onEdit(); }}
+            <button onClick={() => { setOpen(false); onEdit(); }}
               style={{ width: "100%", background: "transparent", border: "none", padding: "12px 16px", textAlign: "left" as const, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-primary)", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -167,8 +157,7 @@ function OwnerMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => v
               Edit
             </button>
             <div style={{ height: "1px", background: "var(--border-default)", margin: "0 12px" }} />
-            <button
-              onClick={() => { setOpen(false); onDelete(); }}
+            <button onClick={() => { setOpen(false); onDelete(); }}
               style={{ width: "100%", background: "transparent", border: "none", padding: "12px 16px", textAlign: "left" as const, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--permanent-live)", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
@@ -182,21 +171,19 @@ function OwnerMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => v
   );
 }
 
-// RESPONSE ITEM
+// ─── REFLECTION ITEM ──────────────────────────────────────────────────────────
 
-function ResponseItem({
-  response,
-  currentUserId,
-  onDelete,
+function ReflectionItem({
+  response, currentUserId, onDelete,
 }: {
   response: Response;
   currentUserId: string | null;
   onDelete: (id: string) => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [deleting, setDeleting]           = useState(false);
   const isOwner = currentUserId === response.profile_id;
-  const name = response.author_name || "Someone";
+  const name    = response.author_name || "Someone";
   const initial = name.charAt(0).toUpperCase();
 
   const handleDelete = async () => {
@@ -221,27 +208,20 @@ function ResponseItem({
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "var(--text-primary)" }}>
-              {name}
-            </span>
+            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "var(--text-primary)" }}>{name}</span>
             {response.author_username && (
-              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)" }}>
-                @{response.author_username}
-              </span>
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)" }}>@{response.author_username}</span>
             )}
           </div>
           {isOwner && !confirmDelete && (
-            <button
-              onClick={() => setConfirmDelete(true)}
+            <button onClick={() => setConfirmDelete(true)}
               style={{ background: "transparent", border: "none", cursor: "pointer", padding: "2px 6px", fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)" }}>
               Remove
             </button>
           )}
           {isOwner && confirmDelete && (
             <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <button onClick={() => setConfirmDelete(false)} style={{ background: "transparent", border: "none", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)" }}>
-                Cancel
-              </button>
+              <button onClick={() => setConfirmDelete(false)} style={{ background: "transparent", border: "none", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)" }}>Cancel</button>
               <button onClick={handleDelete} disabled={deleting} style={{ background: "transparent", border: "none", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--permanent-live)", fontWeight: 600 }}>
                 {deleting ? "Removing…" : "Yes, remove"}
               </button>
@@ -259,26 +239,24 @@ function ResponseItem({
   );
 }
 
-// RESPONSE SECTION
+// ─── REFLECTION SECTION ───────────────────────────────────────────────────────
 
-function ResponseSection({
-  experienceId,
-  user,
-  initialCount,
-  onCountChange,
+function ReflectionSection({
+  experienceId, user, initialCount, onCountChange,
 }: {
   experienceId: string;
   user: AnnieUser | null;
   initialCount: number;
   onCountChange: (n: number) => void;
 }) {
-  const [responses, setResponses]       = useState<Response[]>([]);
-  const [loading, setLoading]           = useState(true);
-  const [text, setText]                 = useState("");
-  const [submitting, setSubmitting]     = useState(false);
-  const [submitError, setSubmitError]   = useState("");
-  const [open, setOpen]                 = useState(false);
-  const textareaRef                     = useRef<HTMLTextAreaElement>(null);
+  const router = useRouter();
+  const [responses, setResponses]     = useState<Response[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [text, setText]               = useState("");
+  const [submitting, setSubmitting]   = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [open, setOpen]               = useState(false);
+  const textareaRef                   = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     getResponsesForExperience(experienceId).then((data) => {
@@ -292,12 +270,7 @@ function ResponseSection({
     setSubmitting(true);
     setSubmitError("");
     const result = await postResponse(experienceId, user.id, text.trim());
-    if (!result.ok) {
-      setSubmitError("Something went wrong. Try again.");
-      setSubmitting(false);
-      return;
-    }
-    // Re-fetch to get the full response with author info
+    if (!result.ok) { setSubmitError("Something went wrong. Try again."); setSubmitting(false); return; }
     const updated = await getResponsesForExperience(experienceId);
     setResponses(updated);
     onCountChange(updated.length);
@@ -316,8 +289,9 @@ function ResponseSection({
     <div style={{ padding: "0 24px", marginTop: "32px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
         <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "20px", fontWeight: 300, color: "var(--text-primary)", margin: 0 }}>
-          {responses.length === 0 ? "No responses yet" : `${responses.length} ${responses.length === 1 ? "response" : "responses"}`}
+          {responses.length === 0 ? "No reflections yet" : `${responses.length} ${responses.length === 1 ? "reflection" : "reflections"}`}
         </h3>
+
         {user && !open && (
           <button
             onClick={() => { setOpen(true); setTimeout(() => textareaRef.current?.focus(), 50); }}
@@ -325,24 +299,30 @@ function ResponseSection({
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
-            Respond
+            Reflect
           </button>
         )}
+
         {!user && (
           <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>
-            <Link href="/" style={{ color: "var(--permanent-gold)", textDecoration: "none", fontWeight: 600 }}>Sign in</Link> to respond
+            <button
+              onClick={() => router.push(`/?redirect=/experience/${experienceId}`)}
+              style={{ background: "transparent", border: "none", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--permanent-gold)", fontWeight: 600, padding: 0 }}>
+              Sign in
+            </button>
+            {" "}to reflect
           </span>
         )}
       </div>
 
-      {/* Response input */}
+      {/* Reflection input */}
       {user && open && (
         <div style={{ marginBottom: "24px", background: "var(--surface-card)", border: "1px solid var(--border-default)", borderRadius: "10px", padding: "16px" }}>
           <textarea
             ref={textareaRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Share your response…"
+            placeholder="Add your reflection…"
             rows={3}
             style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", fontFamily: "'Inter', sans-serif", fontSize: "14px", color: "var(--text-primary)", lineHeight: 1.7, boxSizing: "border-box" as const }}
           />
@@ -350,33 +330,24 @@ function ResponseSection({
             <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--permanent-live)", margin: "8px 0 0" }}>{submitError}</p>
           )}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px", borderTop: "1px solid var(--border-default)", paddingTop: "12px" }}>
-            <button
-              onClick={() => { setOpen(false); setText(""); setSubmitError(""); }}
+            <button onClick={() => { setOpen(false); setText(""); setSubmitError(""); }}
               style={{ background: "transparent", border: "none", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)", padding: "7px 12px" }}>
               Cancel
             </button>
-            <button
-              onClick={handleSubmit}
-              disabled={submitting || !text.trim()}
+            <button onClick={handleSubmit} disabled={submitting || !text.trim()}
               style={{ background: "var(--permanent-gold)", border: "none", borderRadius: "6px", padding: "7px 16px", cursor: submitting || !text.trim() ? "not-allowed" : "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white", opacity: submitting || !text.trim() ? 0.5 : 1 }}>
-              {submitting ? "Posting…" : "Post response"}
+              {submitting ? "Posting…" : "Post reflection"}
             </button>
           </div>
         </div>
       )}
 
-      {/* Response list */}
       {loading ? (
         <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>Loading…</p>
       ) : (
         <div>
           {responses.map((r) => (
-            <ResponseItem
-              key={r.id}
-              response={r}
-              currentUserId={user?.id ?? null}
-              onDelete={handleDelete}
-            />
+            <ReflectionItem key={r.id} response={r} currentUserId={user?.id ?? null} onDelete={handleDelete} />
           ))}
         </div>
       )}
@@ -384,7 +355,7 @@ function ResponseSection({
   );
 }
 
-// MAIN PAGE
+// ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 
 export default function ExperiencePage() {
   const params = useParams();
@@ -395,9 +366,11 @@ export default function ExperiencePage() {
   const [user, setUser]                     = useState<AnnieUser | null>(null);
   const [loading, setLoading]               = useState(true);
   const [notFound, setNotFound]             = useState(false);
-  const [carrying, setCarrying]             = useState(false);
-  const [carriedLocally, setCarriedLocally] = useState(false);
-  const [responseCount, setResponseCount]   = useState(0);
+  const [reflectionCount, setReflectionCount] = useState(0);
+
+  // Reactions state
+  const [reactionCounts, setReactionCounts] = useState<ReactionCounts>({});
+  const [userReaction, setUserReaction]     = useState<ReactionType | null>(null);
 
   const [editOpen, setEditOpen]                   = useState(false);
   const [editTitle, setEditTitle]                 = useState("");
@@ -426,11 +399,19 @@ export default function ExperiencePage() {
 
   useEffect(() => {
     if (!id) return;
-    Promise.all([getExperienceById(id), getCurrentUser()]).then(([data, u]) => {
+    Promise.all([getExperienceById(id), getCurrentUser()]).then(async ([data, u]) => {
       if (!data) { setNotFound(true); setLoading(false); return; }
       setExp(data);
       setUser(u);
-      setResponseCount(data.response_count);
+      setReflectionCount(data.response_count);
+
+      // Load reactions
+      const [counts, myReaction] = await Promise.all([
+        getReactionCounts(id),
+        u ? getUserReaction(id, u.id) : Promise.resolve(null),
+      ]);
+      setReactionCounts(counts);
+      setUserReaction(myReaction);
       setLoading(false);
     });
   }, [id]);
@@ -474,10 +455,7 @@ export default function ExperiencePage() {
     setEditImagePreviews((prev) => [...prev, URL.createObjectURL(file)]);
   };
 
-  const handleRemoveExistingImage = (index: number) => {
-    setEditImageUrls((prev) => prev.filter((_, i) => i !== index));
-  };
-
+  const handleRemoveExistingImage = (index: number) => setEditImageUrls((prev) => prev.filter((_, i) => i !== index));
   const handleRemoveNewImage = (index: number) => {
     setEditImagePreviews((prev) => { URL.revokeObjectURL(prev[index]); return prev.filter((_, i) => i !== index); });
     setEditImageFiles((prev) => prev.filter((_, i) => i !== index));
@@ -505,24 +483,19 @@ export default function ExperiencePage() {
     }
 
     const result = await updateExperience(exp.id, {
-      title:      editTitle.trim(),
-      content:    editBody.trim(),
+      title: editTitle.trim(), content: editBody.trim(),
       pull_quote: editPull.trim() || null,
       image_urls: finalImageUrls,
-      video_url:  editParsedVideo ? editVideoUrl.trim() : null,
+      video_url: editParsedVideo ? editVideoUrl.trim() : null,
     });
 
     if (!result.ok) { setSaveError("Something went wrong. Try again."); setSaving(false); return; }
 
     setExp({
-      ...exp,
-      title:             editTitle.trim(),
-      content:           editBody.trim(),
-      pull_quote:        editPull.trim() || null,
-      image_urls:        finalImageUrls,
-      video_url:         editParsedVideo ? editVideoUrl.trim() : null,
-      is_edited:         true,
-      edited_at:         new Date().toISOString(),
+      ...exp, title: editTitle.trim(), content: editBody.trim(),
+      pull_quote: editPull.trim() || null, image_urls: finalImageUrls,
+      video_url: editParsedVideo ? editVideoUrl.trim() : null,
+      is_edited: true, edited_at: new Date().toISOString(),
       read_time_minutes: Math.max(1, Math.ceil(editBody.trim().split(/\s+/).length / 200)),
     });
     editImagePreviews.forEach((url) => URL.revokeObjectURL(url));
@@ -538,12 +511,28 @@ export default function ExperiencePage() {
     router.replace("/");
   };
 
-  const handleCarryForward = async () => {
-    if (!exp || carrying || carriedLocally || !user) return;
-    setCarrying(true);
-    const ok = await carryForward(exp.id);
-    if (ok) { setExp({ ...exp, carried_forward_count: exp.carried_forward_count + 1 }); setCarriedLocally(true); }
-    setCarrying(false);
+  const handleReact = async (type: ReactionType | null) => {
+    if (!exp) return;
+    const prev = userReaction;
+    // Optimistic update
+    setUserReaction(type);
+    setReactionCounts((c) => {
+      const next = { ...c };
+      if (prev) next[prev] = Math.max((next[prev] ?? 1) - 1, 0);
+      if (type) next[type] = (next[type] ?? 0) + 1;
+      return next;
+    });
+    const result = await upsertReaction(exp.id, type);
+    if (!result.ok) {
+      // Rollback
+      setUserReaction(prev);
+      setReactionCounts((c) => {
+        const next = { ...c };
+        if (type) next[type] = Math.max((next[type] ?? 1) - 1, 0);
+        if (prev) next[prev] = (next[prev] ?? 0) + 1;
+        return next;
+      });
+    }
   };
 
   if (loading) {
@@ -575,9 +564,6 @@ export default function ExperiencePage() {
   const avatar     = exp.is_anonymous ? null : (exp.author_avatar_url || null);
   const paragraphs = exp.content.split(/\n+/).filter((p) => p.trim().length > 0);
 
-  // Carry forward button — only active when signed in
-  const carryDisabled = carrying || carriedLocally || !user;
-
   return (
     <div style={{ minHeight: "100vh", background: "var(--surface-bg)" }}>
 
@@ -586,10 +572,10 @@ export default function ExperiencePage() {
         position: "sticky", top: 0, zIndex: 50,
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "0 20px", height: "56px",
-        background: "var(--surface-bg)",
-        borderBottom: "1px solid var(--border-default)",
+        background: "var(--surface-bg)", borderBottom: "1px solid var(--border-default)",
       }}>
-        <button onClick={() => router.back()} aria-label="Back" style={{ background: "transparent", border: "none", cursor: "pointer", padding: "6px", display: "flex", alignItems: "center" }}>
+        <button onClick={() => router.back()} aria-label="Back"
+          style={{ background: "transparent", border: "none", cursor: "pointer", padding: "6px", display: "flex", alignItems: "center" }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-primary)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
             <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
           </svg>
@@ -597,11 +583,7 @@ export default function ExperiencePage() {
         <Link href="/" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "20px", fontWeight: 600, color: "var(--text-primary)", textDecoration: "none" }}>
           Annie<span style={{ color: "var(--permanent-gold)" }}>.</span>
         </Link>
-        {isOwner ? (
-          <OwnerMenu onEdit={openEdit} onDelete={() => setDeleteConfirm(true)} />
-        ) : (
-          <div style={{ width: "34px" }} />
-        )}
+        {isOwner ? <OwnerMenu onEdit={openEdit} onDelete={() => setDeleteConfirm(true)} /> : <div style={{ width: "34px" }} />}
       </div>
 
       {/* READING BODY */}
@@ -643,9 +625,7 @@ export default function ExperiencePage() {
         </div>
 
         {/* Media */}
-        {exp.image_urls && exp.image_urls.length > 0 && (
-          <ReadingPhotoCarousel urls={exp.image_urls} />
-        )}
+        {exp.image_urls && exp.image_urls.length > 0 && <ReadingPhotoCarousel urls={exp.image_urls} />}
         {exp.video_url && (
           <div style={{ marginTop: exp.image_urls?.length ? "16px" : "0" }}>
             <ReadingVideo url={exp.video_url} />
@@ -655,9 +635,7 @@ export default function ExperiencePage() {
         {/* Body */}
         <div style={{ padding: "28px 24px 0" }}>
           {paragraphs.map((p, i) => (
-            <p key={i} style={{ fontSize: "17px", color: "var(--text-soft)", lineHeight: 1.85, margin: "0 0 22px", fontWeight: 300 }}>
-              {p}
-            </p>
+            <p key={i} style={{ fontSize: "17px", color: "var(--text-soft)", lineHeight: 1.85, margin: "0 0 22px", fontWeight: 300 }}>{p}</p>
           ))}
         </div>
 
@@ -670,39 +648,32 @@ export default function ExperiencePage() {
           </div>
         )}
 
-        {/* Footer */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "24px 24px 0", marginTop: "28px", borderTop: "1px solid var(--border-default)", flexWrap: "wrap" as const, gap: "12px" }}>
-          <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>
-            {responseCount} {responseCount === 1 ? "response" : "responses"}
-          </span>
-          <button
-            onClick={handleCarryForward}
-            disabled={carryDisabled}
-            title={!user ? "Sign in to carry this forward" : undefined}
-            style={{
-              display: "flex", alignItems: "center", gap: "6px",
-              background: carriedLocally ? "transparent" : "var(--permanent-gold)",
-              color: carriedLocally ? "var(--permanent-gold)" : "white",
-              border: carriedLocally ? "1px solid var(--permanent-gold)" : "none",
-              borderRadius: "var(--radius-sm)", padding: "10px 18px",
-              cursor: carryDisabled ? "default" : "pointer",
-              fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600,
-              opacity: !user && !carriedLocally ? 0.5 : 1,
-              transition: "all 0.2s",
-            }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill={carriedLocally ? "var(--permanent-gold)" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-            </svg>
-            {exp.carried_forward_count} carried this forward
-          </button>
+        {/* Footer — reactions + reflection count */}
+        <div style={{ padding: "24px 24px 0", marginTop: "28px", borderTop: "1px solid var(--border-default)" }}>
+          <ReactionBar
+            experienceId={exp.id}
+            counts={reactionCounts}
+            userReaction={userReaction}
+            isSignedIn={!!user}
+            interactive={true}
+            reflectCount={reflectionCount}
+            onReact={handleReact}
+          />
+
+          {/* Reflection count below reactions */}
+          <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid var(--border-default)" }}>
+            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>
+              {reflectionCount} {reflectionCount === 1 ? "reflection" : "reflections"}
+            </span>
+          </div>
         </div>
 
-        {/* Responses */}
-        <ResponseSection
+        {/* Reflections */}
+        <ReflectionSection
           experienceId={exp.id}
           user={user}
-          initialCount={responseCount}
-          onCountChange={setResponseCount}
+          initialCount={reflectionCount}
+          onCountChange={setReflectionCount}
         />
       </div>
 
@@ -710,28 +681,23 @@ export default function ExperiencePage() {
       {editOpen && (
         <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "var(--permanent-ink)", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", height: "56px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
-            <button onClick={() => setEditOpen(false)} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "6px", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.5)" }}>
-              Cancel
-            </button>
-            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "18px", fontWeight: 600, color: "var(--permanent-parchment)" }}>
-              Edit experience
-            </span>
-            <button onClick={handleSave} disabled={saving} style={{ background: "var(--permanent-gold)", border: "none", borderRadius: "6px", padding: "7px 16px", cursor: saving ? "not-allowed" : "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white", opacity: saving ? 0.6 : 1 }}>
+            <button onClick={() => setEditOpen(false)} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "6px", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.5)" }}>Cancel</button>
+            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "18px", fontWeight: 600, color: "var(--permanent-parchment)" }}>Edit experience</span>
+            <button onClick={handleSave} disabled={saving}
+              style={{ background: "var(--permanent-gold)", border: "none", borderRadius: "6px", padding: "7px 16px", cursor: saving ? "not-allowed" : "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Saving…" : "Save"}
             </button>
           </div>
-
           <div style={{ flex: 1, overflowY: "auto", padding: "28px 24px" }}>
             <div style={{ maxWidth: "680px", margin: "0 auto" }}>
-              {saveError && (
-                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e07070", marginBottom: "16px" }}>{saveError}</p>
-              )}
-              <textarea ref={editTitleRef} value={editTitle} onChange={(e) => { setEditTitle(e.target.value); autoGrow(e.target); }} placeholder="Title" rows={1} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid rgba(255,255,255,0.1)", outline: "none", resize: "none", overflow: "hidden", fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(22px, 4vw, 28px)", fontWeight: 600, color: "var(--permanent-parchment)", lineHeight: 1.2, marginBottom: "20px", boxSizing: "border-box" as const, padding: "8px 0" }} />
-              <textarea ref={editBodyRef} value={editBody} onChange={(e) => { setEditBody(e.target.value); autoGrow(e.target); }} placeholder="Write your experience here." rows={1} style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", overflow: "hidden", fontFamily: "'Inter', sans-serif", fontSize: "16px", color: "var(--permanent-parchment)", lineHeight: 1.8, marginBottom: "20px", boxSizing: "border-box" as const, minHeight: "200px" }} />
-
+              {saveError && <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e07070", marginBottom: "16px" }}>{saveError}</p>}
+              <textarea ref={editTitleRef} value={editTitle} onChange={(e) => { setEditTitle(e.target.value); autoGrow(e.target); }} placeholder="Title" rows={1}
+                style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid rgba(255,255,255,0.1)", outline: "none", resize: "none", overflow: "hidden", fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(22px, 4vw, 28px)", fontWeight: 600, color: "var(--permanent-parchment)", lineHeight: 1.2, marginBottom: "20px", boxSizing: "border-box" as const, padding: "8px 0" }} />
+              <textarea ref={editBodyRef} value={editBody} onChange={(e) => { setEditBody(e.target.value); autoGrow(e.target); }} placeholder="Write your experience here." rows={1}
+                style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", overflow: "hidden", fontFamily: "'Inter', sans-serif", fontSize: "16px", color: "var(--permanent-parchment)", lineHeight: 1.8, marginBottom: "20px", boxSizing: "border-box" as const, minHeight: "200px" }} />
               <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase" as const, color: "rgba(246,241,234,0.45)", marginBottom: "8px" }}>A line to lead with (optional)</p>
-              <textarea value={editPull} onChange={(e) => setEditPull(e.target.value)} placeholder="If one sentence stays with you the most, put it here." rows={2} style={{ width: "100%", background: "rgba(184,146,58,0.04)", border: "1px solid rgba(184,146,58,0.2)", borderRadius: "8px", padding: "10px 12px", fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "15px", color: "var(--permanent-parchment)", lineHeight: 1.6, resize: "none", outline: "none", boxSizing: "border-box" as const, marginBottom: "20px" }} />
-
+              <textarea value={editPull} onChange={(e) => setEditPull(e.target.value)} placeholder="If one sentence stays with you the most, put it here." rows={2}
+                style={{ width: "100%", background: "rgba(184,146,58,0.04)", border: "1px solid rgba(184,146,58,0.2)", borderRadius: "8px", padding: "10px 12px", fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "15px", color: "var(--permanent-parchment)", lineHeight: 1.6, resize: "none", outline: "none", boxSizing: "border-box" as const, marginBottom: "20px" }} />
               <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase" as const, color: "rgba(246,241,234,0.45)", marginBottom: "8px" }}>Photos (optional)</p>
               <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleEditImageSelect} style={{ display: "none" }} />
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px", marginBottom: "8px" }}>
@@ -759,9 +725,9 @@ export default function ExperiencePage() {
               </div>
               {editImageError && <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#bf9b4e", marginBottom: "8px" }}>{editImageError}</p>}
               <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "rgba(246,241,234,0.4)", marginBottom: "20px" }}>Up to {FREE_PHOTO_LIMIT} photos on the free plan.</p>
-
               <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase" as const, color: "rgba(246,241,234,0.45)", marginBottom: "8px" }}>Video link (optional)</p>
-              <input value={editVideoUrl} onChange={(e) => handleEditVideoUrlChange(e.target.value)} placeholder="https://youtube.com/watch?v=..." style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: `1px solid ${editVideoUrlError ? "#bf9b4e" : "rgba(255,255,255,0.12)"}`, borderRadius: "8px", padding: "10px 12px", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--permanent-parchment)", outline: "none", boxSizing: "border-box" as const }} />
+              <input value={editVideoUrl} onChange={(e) => handleEditVideoUrlChange(e.target.value)} placeholder="https://youtube.com/watch?v=..."
+                style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: `1px solid ${editVideoUrlError ? "#bf9b4e" : "rgba(255,255,255,0.12)"}`, borderRadius: "8px", padding: "10px 12px", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--permanent-parchment)", outline: "none", boxSizing: "border-box" as const }} />
               {editVideoUrlError && <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#bf9b4e", marginTop: "6px" }}>{editVideoUrlError}</p>}
               <div style={{ height: "40px" }} />
             </div>
@@ -773,16 +739,12 @@ export default function ExperiencePage() {
       {deleteConfirm && (
         <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(15,14,12,0.85)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
           <div style={{ background: "var(--surface-card)", border: "1px solid var(--border-default)", borderRadius: "12px", padding: "28px 24px", maxWidth: "360px", width: "100%", textAlign: "center" as const }}>
-            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "22px", fontWeight: 300, color: "var(--text-primary)", marginBottom: "10px" }}>
-              Remove this experience?
-            </p>
+            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "22px", fontWeight: 300, color: "var(--text-primary)", marginBottom: "10px" }}>Remove this experience?</p>
             <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)", marginBottom: "24px", lineHeight: 1.6 }}>
-              This removes it from Annie permanently. Anyone who has already read or carried it forward will no longer be able to find it here.
+              This removes it from Annie permanently. Anyone who has already read or reacted to it will no longer be able to find it here.
             </p>
             <div style={{ display: "flex", gap: "10px" }}>
-              <button onClick={() => setDeleteConfirm(false)} style={{ flex: 1, background: "transparent", border: "1px solid var(--border-default)", borderRadius: "8px", padding: "11px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>
-                Keep it
-              </button>
+              <button onClick={() => setDeleteConfirm(false)} style={{ flex: 1, background: "transparent", border: "1px solid var(--border-default)", borderRadius: "8px", padding: "11px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>Keep it</button>
               <button onClick={handleDelete} disabled={deleting} style={{ flex: 1, background: "var(--permanent-live)", border: "none", borderRadius: "8px", padding: "11px", cursor: deleting ? "not-allowed" : "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white", opacity: deleting ? 0.6 : 1 }}>
                 {deleting ? "Removing…" : "Yes, remove it"}
               </button>
