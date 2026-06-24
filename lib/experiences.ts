@@ -75,10 +75,10 @@ export async function saveDraftToSupabase(exp: NewExperience & { id?: string }):
 }
 
 // ─── Feed queries ─────────────────────────────────────────────────────────────
-// author_username is joined live from profiles so it always reflects the
-// current handle, never a stale snapshot from publish time.
-// Giants Way: Twitter/Instagram/Threads always show current handle on posts.
-// Long term: no migration needed if someone changes their username.
+// author_username and author_avatar_url are joined live from profiles so they
+// always reflect the current state — never a stale snapshot from publish time.
+// Giants Way: Twitter/Instagram/Threads always show current handle and avatar on posts.
+// Long term: no migration needed if someone changes their username or photo.
 
 export type FeedExperience = {
   id:                   string;
@@ -96,6 +96,7 @@ export type FeedExperience = {
   profile_id:           string;
   display_name:         string | null;
   author_username:      string | null; // joined live from profiles
+  author_avatar_url:    string | null; // joined live from profiles
   image_urls:           string[];
   video_url:            string | null;
   is_edited:            boolean;
@@ -103,14 +104,13 @@ export type FeedExperience = {
 };
 
 export async function getFeedExperiences(category?: string): Promise<FeedExperience[]> {
-  // Join profiles to get username live — never rely on stale snapshot data.
-  // Supabase foreign key join: experiences.profile_id → profiles.id
   let query = supabase
     .from("experiences")
     .select(`
       *,
       profiles!experiences_profile_id_fkey (
-        username
+        username,
+        avatar_url
       )
     `)
     .eq("published", true)
@@ -124,10 +124,10 @@ export async function getFeedExperiences(category?: string): Promise<FeedExperie
   const { data, error } = await query;
   if (error) return [];
 
-  // Flatten the joined profile data into the experience row
   return (data as any[]).map((row) => ({
     ...row,
-    author_username: row.profiles?.username || null,
+    author_username:   row.profiles?.username   || null,
+    author_avatar_url: row.profiles?.avatar_url || null,
     profiles: undefined,
   })) as FeedExperience[];
 }
@@ -138,7 +138,8 @@ export async function getExperienceById(id: string): Promise<FeedExperience | nu
     .select(`
       *,
       profiles!experiences_profile_id_fkey (
-        username
+        username,
+        avatar_url
       )
     `)
     .eq("id", id)
@@ -149,18 +150,12 @@ export async function getExperienceById(id: string): Promise<FeedExperience | nu
 
   return {
     ...(data as any),
-    author_username: (data as any).profiles?.username || null,
+    author_username:   (data as any).profiles?.username   || null,
+    author_avatar_url: (data as any).profiles?.avatar_url || null,
     profiles: undefined,
   } as FeedExperience;
 }
 
-// includeAnonymous defaults to false because this function is shared by both
-// the owner's own profile and everyone else's public profile. An anonymous
-// experience must never appear next to someone's real name and photo on the
-// public page — that's the entire point of the anonymous toggle. Only the
-// owner's own profile view passes includeAnonymous=true, so a person can see
-// the complete list of everything they've written, including what they
-// chose to post anonymously.
 export async function getExperiencesByProfile(
   profileId: string,
   includeAnonymous = false
@@ -170,7 +165,8 @@ export async function getExperiencesByProfile(
     .select(`
       *,
       profiles!experiences_profile_id_fkey (
-        username
+        username,
+        avatar_url
       )
     `)
     .eq("profile_id", profileId)
@@ -186,22 +182,20 @@ export async function getExperiencesByProfile(
 
   return (data as any[]).map((row) => ({
     ...row,
-    author_username: row.profiles?.username || null,
+    author_username:   row.profiles?.username   || null,
+    author_avatar_url: row.profiles?.avatar_url || null,
     profiles: undefined,
   })) as FeedExperience[];
 }
 
-// ─── Public profiles ───────────────────────────────────────────────────────
-// Used by /profile/[id] — guests and other signed-in users viewing someone
-// else. Distinct from lib/auth.ts's AnnieUser, which only ever represents
-// the currently signed-in person.
+// ─── Public profiles ───────────────────────────────────────────────────────────
 
 export type PublicProfile = {
   id:                     string;
   full_name:              string | null;
   avatar_url:             string | null;
   bio:                    string | null;
-  username:               string | null; // added — needed for profile pages and @handle display
+  username:               string | null;
   is_verified:            boolean;
   is_guide:               boolean;
   carried_forward_count:  number;
@@ -253,7 +247,6 @@ export async function updateExperience(id: string, fields: EditableFields): Prom
 }
 
 export async function deleteExperience(id: string, imageUrls: string[]): Promise<{ ok: boolean; error?: string }> {
-  // Remove images from storage first so they don't linger as orphaned files
   if (imageUrls.length > 0) {
     const paths = imageUrls.map((url) => {
       const parts = url.split("/experience-images/");
@@ -271,8 +264,6 @@ export async function deleteExperience(id: string, imageUrls: string[]): Promise
 }
 
 // ─── Image upload ─────────────────────────────────────────────────────────────
-// Free accounts get up to 3 photos per experience. Plus will raise this once
-// Plus actually exists — no point gating a tier that isn't real yet.
 
 export const FREE_PHOTO_LIMIT = 3;
 
@@ -295,10 +286,6 @@ export async function uploadExperienceImage(file: File, userId: string): Promise
 }
 
 // ─── Video link parsing ─────────────────────────────────────────────────────
-// "Video link" (paste a YouTube/Vimeo URL) is a real, working feature — no
-// storage, no transcoding, just an oEmbed-style ID extraction. This is
-// distinct from "video upload," which is not built yet and shown as a
-// disabled, honest "coming soon" control in the editor.
 
 export type ParsedVideo =
   | { platform: "youtube"; id: string; embedUrl: string; thumbnailUrl: string }

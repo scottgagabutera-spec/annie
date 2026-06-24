@@ -90,7 +90,6 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Block UI until profile is set up
   if (showProfileSetup && user) {
     return (
       <ProfileSetupModal
@@ -341,6 +340,7 @@ export default function Home() {
                 authorInitial={initial}
                 authorName={name}
                 authorUsername={exp.is_anonymous ? null : (exp.author_username || null)}
+                authorAvatar={exp.is_anonymous ? null : (exp.author_avatar_url || null)}
                 title={exp.title}
                 excerpt={excerpt}
                 carriedCount={exp.carried_forward_count}

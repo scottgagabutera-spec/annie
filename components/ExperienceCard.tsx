@@ -10,26 +10,27 @@ import { parseVideoUrl } from "../lib/experiences";
 type MediaType = "image" | "video" | "none";
 
 type Props = {
-  pullQuote:      string;
-  category:       string;
-  tag?:           string;
-  authorInitial:  string;
-  authorName:     string;
-  authorUsername?: string | null; // @handle — shown under display name
-  authorNote?:    string;
-  title:          string;
-  excerpt?:       string;
-  mediaType?:     MediaType;
-  mediaUrl?:      string;
-  imageUrls?:     string[];
-  videoUrl?:      string;
-  mediaCount?:    number;
-  isLive?:        boolean;
-  liveStarted?:   string;
-  carriedCount?:  string | number;
-  responseCount?: string | number;
-  readTime?:      string | number;
-  isPlus?:        boolean;
+  pullQuote:       string;
+  category:        string;
+  tag?:            string;
+  authorInitial:   string;
+  authorName:      string;
+  authorUsername?: string | null;
+  authorAvatar?:   string | null; // real photo from profiles.avatar_url
+  authorNote?:     string;
+  title:           string;
+  excerpt?:        string;
+  mediaType?:      MediaType;
+  mediaUrl?:       string;
+  imageUrls?:      string[];
+  videoUrl?:       string;
+  mediaCount?:     number;
+  isLive?:         boolean;
+  liveStarted?:    string;
+  carriedCount?:   string | number;
+  responseCount?:  string | number;
+  readTime?:       string | number;
+  isPlus?:         boolean;
 };
 
 // ─── Photo carousel ───────────────────────────────────────────────────────────
@@ -228,13 +229,58 @@ function RespondButton() {
   );
 }
 
+// ─── Author avatar ────────────────────────────────────────────────────────────
+// Shows real photo when available, falls back to initial.
+// Giants Way: Twitter/Instagram/Threads always show the author's current avatar.
+
+function AuthorAvatar({
+  avatar, initial, isLive,
+}: {
+  avatar?: string | null;
+  initial: string;
+  isLive: boolean;
+}) {
+  const [imgError, setImgError] = useState(false);
+
+  if (avatar && !imgError) {
+    return (
+      <img
+        src={avatar}
+        alt=""
+        onError={() => setImgError(true)}
+        style={{
+          width: "34px",
+          height: "34px",
+          borderRadius: "50%",
+          objectFit: "cover",
+          flexShrink: 0,
+          display: "block",
+        }}
+      />
+    );
+  }
+
+  // Fallback: initial circle
+  return (
+    <div style={{
+      width: "34px", height: "34px", borderRadius: "50%",
+      background: isLive ? "rgba(193,58,58,0.12)" : "var(--gold-soft)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontFamily: "'Cormorant Garamond', serif", fontSize: "15px", fontWeight: 600,
+      color: isLive ? "#c13a3a" : "var(--permanent-gold)", flexShrink: 0,
+    }}>
+      {initial}
+    </div>
+  );
+}
+
 // ─── Main card ────────────────────────────────────────────────────────────────
 
 export default function ExperienceCard({
   pullQuote, category, tag, authorInitial, authorName, authorUsername,
-  authorNote, title, excerpt, mediaType = "none", mediaUrl, imageUrls,
-  videoUrl, mediaCount, isLive = false, liveStarted, carriedCount = 0,
-  responseCount = 0, readTime, isPlus = false,
+  authorAvatar, authorNote, title, excerpt, mediaType = "none", mediaUrl,
+  imageUrls, videoUrl, mediaCount, isLive = false, liveStarted,
+  carriedCount = 0, responseCount = 0, readTime, isPlus = false,
 }: Props) {
   const photos = imageUrls && imageUrls.length > 0
     ? imageUrls
@@ -255,15 +301,7 @@ export default function ExperienceCard({
       {/* ── TOP: Author + category pill ─────────────────────────────────── */}
       <div style={{ padding: "16px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div style={{
-            width: "34px", height: "34px", borderRadius: "50%",
-            background: isLive ? "rgba(193,58,58,0.12)" : "var(--gold-soft)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontFamily: "'Cormorant Garamond', serif", fontSize: "15px", fontWeight: 600,
-            color: isLive ? "#c13a3a" : "var(--permanent-gold)", flexShrink: 0,
-          }}>
-            {authorInitial}
-          </div>
+          <AuthorAvatar avatar={authorAvatar} initial={authorInitial} isLive={isLive} />
           <div>
             <p style={{
               fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600,
@@ -271,17 +309,16 @@ export default function ExperienceCard({
             }}>
               {authorName}
             </p>
-            {/* @handle — shown under display name, Giants Way pattern (Twitter/Instagram/Threads) */}
             {authorUsername && !isLive && (
               <p style={{
                 fontFamily: "'Inter', sans-serif", fontSize: "11px",
-                color: "var(--text-muted)", marginTop: "1px", lineHeight: 1, margin: "1px 0 0 0",
+                color: "var(--text-muted)", margin: "1px 0 0 0", lineHeight: 1,
               }}>
                 @{authorUsername}
               </p>
             )}
             {authorNote && (
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)", marginTop: "2px", margin: "2px 0 0 0" }}>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)", margin: "2px 0 0 0" }}>
                 {authorNote}
               </p>
             )}
