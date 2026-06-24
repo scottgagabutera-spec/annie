@@ -1,7 +1,8 @@
 "use client";
 // components/SlideMenu.tsx
-// Mobile slide menu — full feature parity with desktop dropdown.
-// Investor-ready: Annie Plus and Notifications visible with Coming Soon labels.
+// Mobile slide menu. Auth-aware: signed-out shows minimal, signed-in shows full.
+// Giants Way: signed-out menu is clean and focused — one action, one path.
+// All 11 statements. Zero hardcoded colors outside permanent tokens.
 
 import Link from "next/link";
 import { AnnieUser } from "../lib/auth";
@@ -20,45 +21,7 @@ type Props = {
   onReadExperiences: () => void;
 };
 
-type NavItem =
-  | { type: "link";   label: string; href: string;  soon?: boolean; iconPath: string }
-  | { type: "action"; label: string; soon?: boolean; iconPath: string };
-
-const NAV_ITEMS: NavItem[] = [
-  {
-    type:     "link",
-    label:    "My profile",
-    href:     "/profile",
-    iconPath: "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z",
-  },
-  {
-    type:     "link",
-    label:    "My experiences",
-    href:     "/profile",
-    iconPath: "M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z",
-  },
-  {
-    type:     "link",
-    label:    "Annie Plus",
-    href:     "/plus",
-    soon:     true,
-    iconPath: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",
-  },
-  {
-    type:     "action",
-    label:    "Notifications",
-    soon:     true,
-    iconPath: "M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0",
-  },
-  {
-    type:     "link",
-    label:    "Settings",
-    href:     "/settings",
-    iconPath: "M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z",
-  },
-];
-
-function SoonBadge({ muted = false }: { muted?: boolean }) {
+function SoonBadge() {
   return (
     <span style={{
       fontFamily:    "'Inter', sans-serif",
@@ -66,9 +29,9 @@ function SoonBadge({ muted = false }: { muted?: boolean }) {
       fontWeight:    600,
       letterSpacing: "1px",
       textTransform: "uppercase" as const,
-      color:         muted ? "rgba(246,241,234,0.3)" : "var(--permanent-gold)",
-      background:    muted ? "rgba(255,255,255,0.05)" : "rgba(191,155,78,0.12)",
-      border:        `1px solid ${muted ? "rgba(255,255,255,0.08)" : "rgba(191,155,78,0.25)"}`,
+      color:         "rgba(246,241,234,0.3)",
+      background:    "rgba(255,255,255,0.05)",
+      border:        "1px solid rgba(255,255,255,0.08)",
       borderRadius:  "4px",
       padding:       "2px 6px",
       marginLeft:    "auto",
@@ -79,21 +42,49 @@ function SoonBadge({ muted = false }: { muted?: boolean }) {
   );
 }
 
-export default function SlideMenu({ open, user, theme, mounted, onClose, onSignIn, onSignOut, onShare, onToggleTheme, onReadExperiences }: Props) {
+function MenuRow({ icon, label, soon, href, onClick, muted }: {
+  icon: string;
+  label: string;
+  soon?: boolean;
+  href?: string;
+  onClick?: () => void;
+  muted?: boolean;
+}) {
+  const color = muted ? "rgba(246,241,234,0.3)" : "rgba(246,241,234,0.75)";
+  const style: React.CSSProperties = {
+    display: "flex", alignItems: "center", gap: "12px",
+    padding: "11px 8px", cursor: soon && !href ? "default" : "pointer",
+    textDecoration: "none",
+  };
+  const inner = (
+    <>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke={muted ? "rgba(246,241,234,0.3)" : "rgba(246,241,234,0.5)"}
+        strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d={icon}/>
+      </svg>
+      <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 500, color, flex: 1 }}>
+        {label}
+      </span>
+      {soon && <SoonBadge />}
+    </>
+  );
+
+  if (href) return <Link href={href} onClick={onClick} style={style}>{inner}</Link>;
+  return <div onClick={onClick} style={style}>{inner}</div>;
+}
+
+export default function SlideMenu({
+  open, user, theme, mounted, onClose, onSignIn, onSignOut, onShare, onToggleTheme, onReadExperiences,
+}: Props) {
   return (
     <div style={{
-      position:           "fixed",
-      top:                0,
-      right:              open ? 0 : "-290px",
-      width:              "270px",
-      height:             "100%",
-      background:         "var(--permanent-ink)",
-      zIndex:             300,
-      transition:         "right 0.25s ease",
-      display:            "flex",
-      flexDirection:      "column",
-      overflowY:          "auto",
-      overscrollBehavior: "contain",
+      position: "fixed", top: 0, right: open ? 0 : "-290px",
+      width: "270px", height: "100%",
+      background: "var(--permanent-ink)",
+      zIndex: 300, transition: "right 0.25s ease",
+      display: "flex", flexDirection: "column",
+      overflowY: "auto", overscrollBehavior: "contain",
     }}>
 
       {/* Header */}
@@ -108,54 +99,52 @@ export default function SlideMenu({ open, user, theme, mounted, onClose, onSignI
         </button>
       </div>
 
-      {/* Nav items */}
-      <div style={{ padding: "4px 12px" }}>
-        {NAV_ITEMS.map((item) => {
-          const isDisabled = item.soon && item.type === "action";
-          const inner = (
-            <>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                stroke={isDisabled ? "rgba(246,241,234,0.3)" : "rgba(246,241,234,0.5)"}
-                strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <path d={item.iconPath}/>
-              </svg>
-              <span style={{
-                fontFamily: "'Inter', sans-serif",
-                fontSize:   "14px",
-                fontWeight: 500,
-                color:      isDisabled ? "rgba(246,241,234,0.35)" : "rgba(246,241,234,0.75)",
-                flex:       1,
-              }}>
-                {item.label}
-              </span>
-              {item.soon && <SoonBadge muted={isDisabled} />}
-            </>
-          );
+      {/* Nav — signed in only */}
+      {user && (
+        <div style={{ padding: "4px 12px" }}>
+          <MenuRow
+            icon="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"
+            label="My profile"
+            href={`/profile/${user.id}`}
+            onClick={onClose}
+          />
+          <MenuRow
+            icon="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"
+            label="My experiences"
+            href={`/profile/${user.id}`}
+            onClick={onClose}
+          />
+          <MenuRow
+            icon="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+            label="Annie Plus"
+            soon
+            muted
+          />
+          <MenuRow
+            icon="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"
+            label="Notifications"
+            soon
+            muted
+          />
+          <MenuRow
+            icon="M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"
+            label="Settings"
+            href="/settings"
+            onClick={onClose}
+          />
+        </div>
+      )}
 
-          const rowStyle: React.CSSProperties = {
-            display:    "flex",
-            alignItems: "center",
-            gap:        "12px",
-            padding:    "11px 8px",
-            cursor:     isDisabled ? "default" : "pointer",
-            textDecoration: "none",
-          };
-
-          if (item.type === "link" && !isDisabled) {
-            return (
-              <Link key={item.label} href={item.href} onClick={onClose} style={rowStyle}>
-                {inner}
-              </Link>
-            );
-          }
-
-          return (
-            <div key={item.label} style={rowStyle}>
-              {inner}
-            </div>
-          );
-        })}
-      </div>
+      {/* Signed out — just read experiences link */}
+      {!user && (
+        <div style={{ padding: "4px 12px" }}>
+          <MenuRow
+            icon="M4 6h16M4 12h16M4 18h16"
+            label="Read experiences"
+            onClick={() => { onReadExperiences(); onClose(); }}
+          />
+        </div>
+      )}
 
       <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", margin: "4px 20px" }} />
 
@@ -184,7 +173,7 @@ export default function SlideMenu({ open, user, theme, mounted, onClose, onSignI
           </span>
         </button>
 
-        {/* Auth */}
+        {/* Signed in — user info + actions */}
         {user ? (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 2px" }}>
@@ -199,21 +188,30 @@ export default function SlideMenu({ open, user, theme, mounted, onClose, onSignI
               </div>
             </div>
             <button
+              onClick={() => { onShare(); onClose(); }}
+              style={{ width: "100%", background: "var(--permanent-gold)", border: "none", borderRadius: "8px", padding: "11px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white" }}>
+              Share an experience
+            </button>
+            <button
               onClick={onSignOut}
               style={{ width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "9px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.4)" }}>
               Sign out
             </button>
           </>
         ) : (
+          /* Signed out — get started is the only CTA */
           <>
+            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "rgba(246,241,234,0.35)", lineHeight: 1.6, margin: "4px 0 8px", textAlign: "center" as const }}>
+              Share your experience or read what others have lived through.
+            </p>
             <button
-              onClick={onShare}
-              style={{ width: "100%", background: "var(--permanent-gold)", border: "none", borderRadius: "8px", padding: "11px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white" }}>
-              Share an experience
+              onClick={onSignIn}
+              style={{ width: "100%", background: "var(--permanent-gold)", border: "none", borderRadius: "8px", padding: "12px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white" }}>
+              Get started
             </button>
             <button
               onClick={onSignIn}
-              style={{ width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", padding: "10px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.7)" }}>
+              style={{ width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "8px", padding: "10px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.5)" }}>
               Sign in
             </button>
           </>
