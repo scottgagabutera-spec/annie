@@ -87,7 +87,7 @@ export type FeedExperience = {
   response_count:        number;
   read_time_minutes:     number;
   created_at:            string;
-  profile_id:            string;
+  profile_id:            string | null;
   display_name:          string | null;
   author_name:           string | null;
   author_username:       string | null;
@@ -98,18 +98,16 @@ export type FeedExperience = {
   edited_at:             string | null;
 };
 
+// All three public-facing reads below query `public_experiences` — a Postgres
+// view that masks profile_id, author_name, author_username, and author_avatar_url
+// to null whenever is_anonymous = true. This is enforced at the database level,
+// not just hidden in the UI, so an "anonymous" post never leaks the real author's
+// identity over the network even via direct API inspection.
+
 export async function getFeedExperiences(category?: string): Promise<FeedExperience[]> {
   let query = supabase
-    .from("experiences")
-    .select(`
-      *,
-      profiles!experiences_profile_id_fkey (
-        full_name,
-        username,
-        avatar_url
-      )
-    `)
-    .eq("published", true)
+    .from("public_experiences")
+    .select("*")
     .order("created_at", { ascending: false })
     .limit(20);
 
@@ -120,73 +118,38 @@ export async function getFeedExperiences(category?: string): Promise<FeedExperie
   const { data, error } = await query;
   if (error) return [];
 
-  return (data as any[]).map((row) => ({
-    ...row,
-    author_name:       row.profiles?.full_name  || null,
-    author_username:   row.profiles?.username   || null,
-    author_avatar_url: row.profiles?.avatar_url || null,
-    profiles: undefined,
-  })) as FeedExperience[];
+  return (data || []) as FeedExperience[];
 }
 
 export async function getExperienceById(id: string): Promise<FeedExperience | null> {
   const { data, error } = await supabase
-    .from("experiences")
-    .select(`
-      *,
-      profiles!experiences_profile_id_fkey (
-        full_name,
-        username,
-        avatar_url
-      )
-    `)
+    .from("public_experiences")
+    .select("*")
     .eq("id", id)
-    .eq("published", true)
     .single();
 
   if (error || !data) return null;
-
-  return {
-    ...(data as any),
-    author_name:       (data as any).profiles?.full_name  || null,
-    author_username:   (data as any).profiles?.username   || null,
-    author_avatar_url: (data as any).profiles?.avatar_url || null,
-    profiles: undefined,
-  } as FeedExperience;
+  return data as FeedExperience;
 }
 
 export async function getExperiencesByProfile(
   profileId: string,
   includeAnonymous = false
 ): Promise<FeedExperience[]> {
-  let query = supabase
-    .from("experiences")
-    .select(`
-      *,
-      profiles!experiences_profile_id_fkey (
-        full_name,
-        username,
-        avatar_url
-      )
-    `)
+  // Anonymous posts always resolve profile_id to null in the view, so they
+  // can never be matched back to a profileId here — includeAnonymous is kept
+  // for call-site compatibility but has no effect against this view. If you
+  // need an author to see their own anonymous posts on their own profile page,
+  // that read must go directly against `experiences` with an auth.uid() check,
+  // not through this public-facing function.
+  const { data, error } = await supabase
+    .from("public_experiences")
+    .select("*")
     .eq("profile_id", profileId)
-    .eq("published", true)
     .order("created_at", { ascending: false });
 
-  if (!includeAnonymous) {
-    query = query.eq("is_anonymous", false);
-  }
-
-  const { data, error } = await query;
   if (error) return [];
-
-  return (data as any[]).map((row) => ({
-    ...row,
-    author_name:       row.profiles?.full_name  || null,
-    author_username:   row.profiles?.username   || null,
-    author_avatar_url: row.profiles?.avatar_url || null,
-    profiles: undefined,
-  })) as FeedExperience[];
+  return (data || []) as FeedExperience[];
 }
 
 export type PublicProfile = {
