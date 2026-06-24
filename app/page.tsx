@@ -202,10 +202,6 @@ export default function Home() {
           </div>
         </div>
 
-        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "2.5px", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "20px", paddingBottom: "12px", borderBottom: "1px solid var(--border-default)" }}>
-          {feedLoading ? "Loading…" : experiences.length === 0 ? "No experiences yet" : `${experiences.length} experience${experiences.length === 1 ? "" : "s"}`}
-        </p>
-
         {feedLoading && (
           <div style={{ textAlign: "center", padding: "60px 0", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>
             Loading…
