@@ -227,12 +227,11 @@ export default function Home() {
           const excerpt = exp.content.length > 180
             ? raw.slice(0, raw.lastIndexOf(" ", 180)) + "…"
             : exp.content;
-          const name    = exp.is_anonymous ? "Anonymous" : (exp.display_name || "Someone");
+          const name    = exp.is_anonymous ? "Anonymous" : (exp.author_name || exp.display_name || "Someone");
           const initial = exp.is_anonymous ? "A" : (name.charAt(0).toUpperCase() || "?");
           const hasPhotos = !!exp.image_urls?.length;
 
           return (
-            // Card link → experience page
             <Link
               key={exp.id}
               href={`/experience/${exp.id}`}
