@@ -29,20 +29,20 @@ export async function publishExperience(exp: NewExperience): Promise<PublishResu
   const { data, error } = await supabase
     .from("experiences")
     .insert({
-      profile_id:        exp.profile_id,
-      category:          exp.category,
-      title:             exp.title,
-      content:           exp.content,
-      pull_quote:        exp.pull_quote   || null,
-      language:          exp.language     || "en",
-      is_anonymous:      exp.is_anonymous,
-      is_live:           exp.is_live,
-      is_historical:     exp.is_historical,
-      historical_source: exp.historical_source || null,
-      display_name:      exp.display_name || null,
-      image_urls:        exp.image_urls   || [],
-      video_url:         exp.video_url    || null,
-      published:         true,
+      profile_id:            exp.profile_id,
+      category:              exp.category,
+      title:                 exp.title,
+      content:               exp.content,
+      pull_quote:            exp.pull_quote        || null,
+      language:              exp.language          || "en",
+      is_anonymous:          exp.is_anonymous,
+      is_live:               exp.is_live,
+      is_historical:         exp.is_historical,
+      historical_source:     exp.historical_source || null,
+      display_name:          exp.display_name      || null,
+      image_urls:            exp.image_urls        || [],
+      video_url:             exp.video_url         || null,
+      published:             true,
       carried_forward_count: 0,
       response_count:        0,
       read_time_minutes:     Math.max(1, Math.ceil(exp.content.trim().split(/\s+/).length / 200)),
@@ -74,33 +74,28 @@ export async function saveDraftToSupabase(exp: NewExperience & { id?: string }):
   return { ok: true, id: data.id };
 }
 
-// ─── Feed queries ─────────────────────────────────────────────────────────────
-// author_username and author_avatar_url are joined live from profiles so they
-// always reflect the current state — never a stale snapshot from publish time.
-// Giants Way: Twitter/Instagram/Threads always show current handle and avatar on posts.
-// Long term: no migration needed if someone changes their username or photo.
-
 export type FeedExperience = {
-  id:                   string;
-  category:             string;
-  title:                string;
-  content:              string;
-  pull_quote:           string | null;
-  is_anonymous:         boolean;
-  is_live:              boolean;
-  is_historical:        boolean;
+  id:                    string;
+  category:              string;
+  title:                 string;
+  content:               string;
+  pull_quote:            string | null;
+  is_anonymous:          boolean;
+  is_live:               boolean;
+  is_historical:         boolean;
   carried_forward_count: number;
-  response_count:       number;
-  read_time_minutes:    number;
-  created_at:           string;
-  profile_id:           string;
-  display_name:         string | null;
-  author_username:      string | null; // joined live from profiles
-  author_avatar_url:    string | null; // joined live from profiles
-  image_urls:           string[];
-  video_url:            string | null;
-  is_edited:            boolean;
-  edited_at:            string | null;
+  response_count:        number;
+  read_time_minutes:     number;
+  created_at:            string;
+  profile_id:            string;
+  display_name:          string | null;
+  author_name:           string | null;
+  author_username:       string | null;
+  author_avatar_url:     string | null;
+  image_urls:            string[];
+  video_url:             string | null;
+  is_edited:             boolean;
+  edited_at:             string | null;
 };
 
 export async function getFeedExperiences(category?: string): Promise<FeedExperience[]> {
@@ -109,6 +104,7 @@ export async function getFeedExperiences(category?: string): Promise<FeedExperie
     .select(`
       *,
       profiles!experiences_profile_id_fkey (
+        full_name,
         username,
         avatar_url
       )
@@ -126,6 +122,7 @@ export async function getFeedExperiences(category?: string): Promise<FeedExperie
 
   return (data as any[]).map((row) => ({
     ...row,
+    author_name:       row.profiles?.full_name  || null,
     author_username:   row.profiles?.username   || null,
     author_avatar_url: row.profiles?.avatar_url || null,
     profiles: undefined,
@@ -138,6 +135,7 @@ export async function getExperienceById(id: string): Promise<FeedExperience | nu
     .select(`
       *,
       profiles!experiences_profile_id_fkey (
+        full_name,
         username,
         avatar_url
       )
@@ -150,6 +148,7 @@ export async function getExperienceById(id: string): Promise<FeedExperience | nu
 
   return {
     ...(data as any),
+    author_name:       (data as any).profiles?.full_name  || null,
     author_username:   (data as any).profiles?.username   || null,
     author_avatar_url: (data as any).profiles?.avatar_url || null,
     profiles: undefined,
@@ -165,6 +164,7 @@ export async function getExperiencesByProfile(
     .select(`
       *,
       profiles!experiences_profile_id_fkey (
+        full_name,
         username,
         avatar_url
       )
@@ -182,23 +182,22 @@ export async function getExperiencesByProfile(
 
   return (data as any[]).map((row) => ({
     ...row,
+    author_name:       row.profiles?.full_name  || null,
     author_username:   row.profiles?.username   || null,
     author_avatar_url: row.profiles?.avatar_url || null,
     profiles: undefined,
   })) as FeedExperience[];
 }
 
-// ─── Public profiles ───────────────────────────────────────────────────────────
-
 export type PublicProfile = {
-  id:                     string;
-  full_name:              string | null;
-  avatar_url:             string | null;
-  bio:                    string | null;
-  username:               string | null;
-  is_verified:            boolean;
-  is_guide:               boolean;
-  carried_forward_count:  number;
+  id:                    string;
+  full_name:             string | null;
+  avatar_url:            string | null;
+  bio:                   string | null;
+  username:              string | null;
+  is_verified:           boolean;
+  is_guide:              boolean;
+  carried_forward_count: number;
 };
 
 export async function getProfileById(profileId: string): Promise<PublicProfile | null> {
@@ -216,8 +215,6 @@ export async function carryForward(id: string): Promise<boolean> {
   const { error } = await supabase.rpc("increment_carried_forward", { experience_id: id });
   return !error;
 }
-
-// ─── Edit & Delete ─────────────────────────────────────────────────────────────
 
 export type EditableFields = {
   title:      string;
@@ -263,8 +260,6 @@ export async function deleteExperience(id: string, imageUrls: string[]): Promise
   return { ok: true };
 }
 
-// ─── Image upload ─────────────────────────────────────────────────────────────
-
 export const FREE_PHOTO_LIMIT = 3;
 
 export type ImageUploadResult =
@@ -284,8 +279,6 @@ export async function uploadExperienceImage(file: File, userId: string): Promise
   const { data } = supabase.storage.from("experience-images").getPublicUrl(path);
   return { ok: true, url: data.publicUrl };
 }
-
-// ─── Video link parsing ─────────────────────────────────────────────────────
 
 export type ParsedVideo =
   | { platform: "youtube"; id: string; embedUrl: string; thumbnailUrl: string }
