@@ -10,6 +10,8 @@ type Props = {
   user: AnnieUser | null;
   theme: string | undefined;
   mounted: boolean;
+  signingIn?: boolean;
+  signingOut?: boolean;
   onMenuOpen: () => void;
   onLogoClick: () => void;
   onSignIn: () => void;
@@ -18,7 +20,7 @@ type Props = {
   onToggleTheme: () => void;
 };
 
-export default function Nav({ user, theme, mounted, onMenuOpen, onLogoClick, onSignIn, onSignOut, onShare, onToggleTheme }: Props) {
+export default function Nav({ user, theme, mounted, signingIn = false, signingOut = false, onMenuOpen, onLogoClick, onSignIn, onSignOut, onShare, onToggleTheme }: Props) {
   const [visible, setVisible]               = useState(true);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const lastScrollY = useRef(0);
@@ -166,9 +168,10 @@ export default function Nav({ user, theme, mounted, onMenuOpen, onLogoClick, onS
                 </Link>
 
                 <button
-                  onClick={() => { closeMenu(); onSignOut(); }}
-                  style={{ display: "block", width: "100%", textAlign: "left", padding: "11px 16px", background: "transparent", border: "none", borderTop: "1px solid rgba(255,255,255,0.06)", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.4)" }}>
-                  Sign out
+                  onClick={() => { if (!signingOut) { closeMenu(); onSignOut(); } }}
+                  disabled={signingOut}
+                  style={{ display: "block", width: "100%", textAlign: "left", padding: "11px 16px", background: "transparent", border: "none", borderTop: "1px solid rgba(255,255,255,0.06)", cursor: signingOut ? "default" : "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.4)", opacity: signingOut ? 0.6 : 1 }}>
+                  {signingOut ? "Signing out…" : "Sign out"}
                 </button>
               </div>
             )}
@@ -177,14 +180,15 @@ export default function Nav({ user, theme, mounted, onMenuOpen, onLogoClick, onS
           /* Signed out — Join Annie is primary, Sign in is secondary */
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <span
-              onClick={onSignIn}
-              style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 500, color: "rgba(246,241,234,0.55)", cursor: "pointer" }}>
-              Sign in
+              onClick={() => { if (!signingIn) onSignIn(); }}
+              style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 500, color: "rgba(246,241,234,0.55)", cursor: signingIn ? "default" : "pointer", opacity: signingIn ? 0.5 : 1 }}>
+              {signingIn ? "Signing in…" : "Sign in"}
             </span>
             <button
-              onClick={onSignIn}
-              style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 600, background: "transparent", color: "var(--permanent-gold)", border: "1px solid rgba(191,155,78,0.5)", padding: "7px 16px", borderRadius: "var(--radius-sm)", cursor: "pointer", whiteSpace: "nowrap" }}>
-              Join Annie
+              onClick={() => { if (!signingIn) onSignIn(); }}
+              disabled={signingIn}
+              style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 600, background: "transparent", color: "var(--permanent-gold)", border: "1px solid rgba(191,155,78,0.5)", padding: "7px 16px", borderRadius: "var(--radius-sm)", cursor: signingIn ? "default" : "pointer", whiteSpace: "nowrap", opacity: signingIn ? 0.6 : 1 }}>
+              {signingIn ? "Signing in…" : "Join Annie"}
             </button>
           </div>
         )}

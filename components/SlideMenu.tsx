@@ -13,6 +13,8 @@ type Props = {
   user: AnnieUser | null;
   theme: string | undefined;
   mounted: boolean;
+  signingIn?: boolean;
+  signingOut?: boolean;
   onClose: () => void;
   onSignIn: () => void;
   onSignOut: () => void;
@@ -75,7 +77,7 @@ function MenuRow({ icon, label, soon, href, onClick, muted }: {
 }
 
 export default function SlideMenu({
-  open, user, theme, mounted, onClose, onSignIn, onSignOut, onShare, onToggleTheme, onReadExperiences,
+  open, user, theme, mounted, signingIn = false, signingOut = false, onClose, onSignIn, onSignOut, onShare, onToggleTheme, onReadExperiences,
 }: Props) {
   return (
     <div style={{
@@ -157,8 +159,7 @@ export default function SlideMenu({
           style={{ display: "flex", alignItems: "center", gap: "10px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "9px 14px", cursor: "pointer", width: "100%" }}>
           {mounted && theme === "dark" ? (
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(246,241,234,0.6)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="4"/>
-              <line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/>
+              <circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/>
               <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
               <line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/>
               <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
@@ -193,9 +194,10 @@ export default function SlideMenu({
               Share an experience
             </button>
             <button
-              onClick={onSignOut}
-              style={{ width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "9px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.4)" }}>
-              Sign out
+              onClick={() => { if (!signingOut) onSignOut(); }}
+              disabled={signingOut}
+              style={{ width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "9px", cursor: signingOut ? "default" : "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.4)", opacity: signingOut ? 0.6 : 1 }}>
+              {signingOut ? "Signing out…" : "Sign out"}
             </button>
           </>
         ) : (
@@ -205,14 +207,16 @@ export default function SlideMenu({
               Share your experience or read what others have lived through.
             </p>
             <button
-              onClick={onSignIn}
-              style={{ width: "100%", background: "var(--permanent-gold)", border: "none", borderRadius: "8px", padding: "12px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white" }}>
-              Join Annie
+              onClick={() => { if (!signingIn) onSignIn(); }}
+              disabled={signingIn}
+              style={{ width: "100%", background: "var(--permanent-gold)", border: "none", borderRadius: "8px", padding: "12px", cursor: signingIn ? "default" : "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white", opacity: signingIn ? 0.7 : 1 }}>
+              {signingIn ? "Signing in…" : "Join Annie"}
             </button>
             <button
-              onClick={onSignIn}
-              style={{ width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "8px", padding: "10px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.5)" }}>
-              Sign in
+              onClick={() => { if (!signingIn) onSignIn(); }}
+              disabled={signingIn}
+              style={{ width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "8px", padding: "10px", cursor: signingIn ? "default" : "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(246,241,234,0.5)", opacity: signingIn ? 0.6 : 1 }}>
+              {signingIn ? "Signing in…" : "Sign in"}
             </button>
           </>
         )}

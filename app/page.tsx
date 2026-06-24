@@ -79,9 +79,35 @@ export default function Home() {
     };
   }, [menuOpen]);
 
-  const handleSignIn      = () => signInWithGoogle(window.location.origin);
-  const handleSignOut     = async () => { await signOut(); setUser(null); setMenuOpen(false); };
-  const handleShare       = () => { setMenuOpen(false); setShareOpen(true); };
+  const [signingIn, setSigningIn]   = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleSignIn = async () => {
+    if (signingIn) return;
+    setSigningIn(true);
+    try {
+      await signInWithGoogle(window.location.origin);
+      // On success the browser redirects to Google, so this rarely resolves
+      // back here — but if it fails (offline, blocked popup, etc.) we still
+      // need to clear the loading state instead of leaving the button stuck.
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await signOut();
+      setUser(null);
+      setMenuOpen(false);
+    } finally {
+      setSigningOut(false);
+    }
+  };
+
+  const handleShare        = () => { setMenuOpen(false); setShareOpen(true); };
   const handleToggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
   const handleLogoClick   = () => {
     setShareOpen(false);
@@ -116,6 +142,8 @@ export default function Home() {
         user={user}
         theme={theme}
         mounted={mounted}
+        signingIn={signingIn}
+        signingOut={signingOut}
         onClose={() => setMenuOpen(false)}
         onSignIn={handleSignIn}
         onSignOut={handleSignOut}
@@ -131,6 +159,8 @@ export default function Home() {
         user={user}
         theme={theme}
         mounted={mounted}
+        signingIn={signingIn}
+        signingOut={signingOut}
         onMenuOpen={() => setMenuOpen(true)}
         onLogoClick={handleLogoClick}
         onSignIn={handleSignIn}
