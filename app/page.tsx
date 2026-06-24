@@ -148,78 +148,26 @@ export default function Home() {
         overflow: "hidden",
       }}>
         <div style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
+          position: "absolute", top: "50%", left: "50%",
           transform: "translate(-50%, -60%)",
-          width: "600px",
-          height: "340px",
+          width: "600px", height: "340px",
           background: "radial-gradient(ellipse at center, rgba(191,155,78,0.07) 0%, transparent 70%)",
           pointerEvents: "none",
         }} />
-
-        <p style={{
-          fontFamily: "'Inter', sans-serif",
-          fontSize: "9px",
-          fontWeight: 600,
-          letterSpacing: "3.5px",
-          textTransform: "uppercase",
-          color: "var(--permanent-gold)",
-          marginBottom: "18px",
-          opacity: 0.85,
-        }}>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "9px", fontWeight: 600, letterSpacing: "3.5px", textTransform: "uppercase", color: "var(--permanent-gold)", marginBottom: "18px", opacity: 0.85 }}>
           Real experiences. Real people.
         </p>
-
-        <h1 style={{
-          fontFamily: "'Cormorant Garamond', serif",
-          fontSize: "clamp(36px, 7vw, 64px)",
-          fontWeight: 300,
-          color: "var(--permanent-parchment)",
-          lineHeight: 1.18,
-          maxWidth: "680px",
-          margin: "0 auto 20px",
-          letterSpacing: "-0.01em",
-        }}>
+        <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(36px, 7vw, 64px)", fontWeight: 300, color: "var(--permanent-parchment)", lineHeight: 1.18, maxWidth: "680px", margin: "0 auto 20px", letterSpacing: "-0.01em" }}>
           Something happened.<br />
           <em style={{ fontStyle: "italic", color: "rgba(246,241,234,0.6)" }}>Say it here.</em>
         </h1>
-
-        <p style={{
-          fontFamily: "'Inter', sans-serif",
-          fontSize: "14px",
-          color: "rgba(246,241,234,0.42)",
-          maxWidth: "340px",
-          margin: "0 auto 32px",
-          fontWeight: 300,
-          lineHeight: 1.7,
-        }}>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", color: "rgba(246,241,234,0.42)", maxWidth: "340px", margin: "0 auto 32px", fontWeight: 300, lineHeight: 1.7 }}>
           People, companies, nations, and movements. Each one with something worth saying.
         </p>
-
-        <button
-          onClick={handleShare}
-          style={{
-            background: "var(--permanent-gold)",
-            color: "white",
-            border: "none",
-            padding: "14px 36px",
-            borderRadius: "var(--radius-sm)",
-            fontFamily: "'Inter', sans-serif",
-            fontSize: "13px",
-            fontWeight: 600,
-            cursor: "pointer",
-            letterSpacing: "0.3px",
-          }}>
+        <button onClick={handleShare} style={{ background: "var(--permanent-gold)", color: "white", border: "none", padding: "14px 36px", borderRadius: "var(--radius-sm)", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, cursor: "pointer", letterSpacing: "0.3px" }}>
           Share an experience
         </button>
-
-        <p style={{
-          fontFamily: "'Inter', sans-serif",
-          fontSize: "11px",
-          color: "rgba(246,241,234,0.22)",
-          marginTop: "14px",
-        }}>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "rgba(246,241,234,0.22)", marginTop: "14px" }}>
           Reading and sharing are free. Annie Plus starts at $1.50 a month.
         </p>
       </header>
@@ -227,53 +175,26 @@ export default function Home() {
       {/* ── FEED ──────────────────────────────────────────────────────────── */}
       <main id="feed" style={{ maxWidth: "800px", margin: "0 auto", padding: "32px 16px" }}>
 
-        <div style={{
-          overflowX: "auto",
-          WebkitOverflowScrolling: "touch" as any,
-          scrollbarWidth: "none" as any,
-          marginBottom: "24px",
-          marginLeft: "-16px",
-          marginRight: "-16px",
-          paddingLeft: "16px",
-          paddingRight: "16px",
-        }}>
-          <div style={{
-            display: "inline-flex",
-            background: "var(--surface-card)",
-            border: "1px solid var(--border-default)",
-            borderRadius: "var(--radius-md)",
-            padding: "4px",
-            gap: "2px",
-            whiteSpace: "nowrap",
-          }}>
+        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" as any, scrollbarWidth: "none" as any, marginBottom: "24px", marginLeft: "-16px", marginRight: "-16px", paddingLeft: "16px", paddingRight: "16px" }}>
+          <div style={{ display: "inline-flex", background: "var(--surface-card)", border: "1px solid var(--border-default)", borderRadius: "var(--radius-md)", padding: "4px", gap: "2px", whiteSpace: "nowrap" }}>
             {FEED_CATEGORIES.map((cat) => (
               <button
                 key={cat.key}
                 onClick={() => setActiveCategory(cat.key)}
                 style={{
-                  fontFamily:   "'Inter', sans-serif",
-                  fontSize:     "12px",
-                  fontWeight:   activeCategory === cat.key ? 600 : 400,
-                  padding:      "8px 14px",
-                  borderRadius: "var(--radius-sm)",
-                  cursor:       "pointer",
-                  color:        activeCategory === cat.key ? "white" : "var(--text-muted)",
-                  border:       "none",
-                  background:   activeCategory === cat.key
+                  fontFamily: "'Inter', sans-serif", fontSize: "12px",
+                  fontWeight: activeCategory === cat.key ? 600 : 400,
+                  padding: "8px 14px", borderRadius: "var(--radius-sm)", cursor: "pointer",
+                  color: activeCategory === cat.key ? "white" : "var(--text-muted)",
+                  border: "none",
+                  background: activeCategory === cat.key
                     ? (cat.isLive ? "var(--permanent-live)" : "var(--permanent-gold)")
                     : "transparent",
-                  display:      "inline-flex",
-                  alignItems:   "center",
-                  gap:          "6px",
-                  transition:   "all 0.18s",
-                  whiteSpace:   "nowrap",
+                  display: "inline-flex", alignItems: "center", gap: "6px",
+                  transition: "all 0.18s", whiteSpace: "nowrap",
                 }}>
                 {cat.isLive && (
-                  <span style={{
-                    width: "6px", height: "6px", borderRadius: "50%",
-                    background: activeCategory === "live" ? "white" : "var(--permanent-live)",
-                    display: "inline-block", flexShrink: 0,
-                  }} />
+                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: activeCategory === "live" ? "white" : "var(--permanent-live)", display: "inline-block", flexShrink: 0 }} />
                 )}
                 {cat.label}
               </button>
@@ -281,22 +202,8 @@ export default function Home() {
           </div>
         </div>
 
-        <p style={{
-          fontFamily: "'Inter', sans-serif",
-          fontSize: "10px",
-          fontWeight: 700,
-          letterSpacing: "2.5px",
-          textTransform: "uppercase",
-          color: "var(--text-muted)",
-          marginBottom: "20px",
-          paddingBottom: "12px",
-          borderBottom: "1px solid var(--border-default)",
-        }}>
-          {feedLoading
-            ? "Loading…"
-            : experiences.length === 0
-              ? "No experiences yet"
-              : `${experiences.length} experience${experiences.length === 1 ? "" : "s"}`}
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "2.5px", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "20px", paddingBottom: "12px", borderBottom: "1px solid var(--border-default)" }}>
+          {feedLoading ? "Loading…" : experiences.length === 0 ? "No experiences yet" : `${experiences.length} experience${experiences.length === 1 ? "" : "s"}`}
         </p>
 
         {feedLoading && (
@@ -307,15 +214,9 @@ export default function Home() {
 
         {!feedLoading && experiences.length === 0 && (
           <div style={{ textAlign: "center", padding: "60px 0" }}>
-            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "22px", fontWeight: 300, color: "var(--text-primary)", marginBottom: "10px" }}>
-              Nothing here yet.
-            </p>
-            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)", marginBottom: "24px" }}>
-              Be the first to share an experience in this category.
-            </p>
-            <button
-              onClick={handleShare}
-              style={{ background: "var(--permanent-gold)", color: "white", border: "none", padding: "12px 24px", borderRadius: "var(--radius-sm)", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "22px", fontWeight: 300, color: "var(--text-primary)", marginBottom: "10px" }}>Nothing here yet.</p>
+            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)", marginBottom: "24px" }}>Be the first to share an experience in this category.</p>
+            <button onClick={handleShare} style={{ background: "var(--permanent-gold)", color: "white", border: "none", padding: "12px 24px", borderRadius: "var(--radius-sm)", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
               Share an experience
             </button>
           </div>
@@ -329,12 +230,16 @@ export default function Home() {
           const name    = exp.is_anonymous ? "Anonymous" : (exp.display_name || "Someone");
           const initial = exp.is_anonymous ? "A" : (name.charAt(0).toUpperCase() || "?");
           const hasPhotos = !!exp.image_urls?.length;
+
           return (
+            // Card link → experience page
             <Link
               key={exp.id}
               href={`/experience/${exp.id}`}
               style={{ textDecoration: "none", color: "inherit", display: "block", marginBottom: "24px" }}>
               <ExperienceCard
+                id={exp.id}
+                profileId={exp.is_anonymous ? undefined : exp.profile_id}
                 pullQuote={exp.pull_quote || excerpt}
                 category={exp.category.charAt(0).toUpperCase() + exp.category.slice(1)}
                 authorInitial={initial}
@@ -367,14 +272,8 @@ export default function Home() {
       />
 
       <style>{`
-        @media (max-width: 640px) {
-          .desktop-nav { display: none !important; }
-          .mobile-nav  { display: flex !important; }
-        }
-        @media (min-width: 641px) {
-          .desktop-nav { display: flex !important; }
-          .mobile-nav  { display: none !important; }
-        }
+        @media (max-width: 640px) { .desktop-nav { display: none !important; } .mobile-nav { display: flex !important; } }
+        @media (min-width: 641px) { .desktop-nav { display: flex !important; } .mobile-nav { display: none !important; } }
         * { -webkit-tap-highlight-color: transparent; }
         ::-webkit-scrollbar { display: none; }
       `}</style>

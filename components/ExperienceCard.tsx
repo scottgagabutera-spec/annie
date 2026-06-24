@@ -3,20 +3,24 @@
 // Card layout order: author → title → media → excerpt → pull quote → footer
 // One unified surface. No dark/light split. Pull quote as closing hook, not entry point.
 // All 8 statements: mobile first, user friendly, modern, premium, giants way, long term, consistent, unique.
+// Giants Way: author area links to /profile/[id], card links to /experience/[id]. Never the same destination.
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { parseVideoUrl } from "../lib/experiences";
 
 type MediaType = "image" | "video" | "none";
 
 type Props = {
+  id?:             string; // experience id — for the card link
+  profileId?:      string; // author profile id — for the author link
   pullQuote:       string;
   category:        string;
   tag?:            string;
   authorInitial:   string;
   authorName:      string;
   authorUsername?: string | null;
-  authorAvatar?:   string | null; // real photo from profiles.avatar_url
+  authorAvatar?:   string | null;
   authorNote?:     string;
   title:           string;
   excerpt?:        string;
@@ -230,16 +234,8 @@ function RespondButton() {
 }
 
 // ─── Author avatar ────────────────────────────────────────────────────────────
-// Shows real photo when available, falls back to initial.
-// Giants Way: Twitter/Instagram/Threads always show the author's current avatar.
 
-function AuthorAvatar({
-  avatar, initial, isLive,
-}: {
-  avatar?: string | null;
-  initial: string;
-  isLive: boolean;
-}) {
+function AuthorAvatar({ avatar, initial, isLive }: { avatar?: string | null; initial: string; isLive: boolean }) {
   const [imgError, setImgError] = useState(false);
 
   if (avatar && !imgError) {
@@ -248,19 +244,11 @@ function AuthorAvatar({
         src={avatar}
         alt=""
         onError={() => setImgError(true)}
-        style={{
-          width: "34px",
-          height: "34px",
-          borderRadius: "50%",
-          objectFit: "cover",
-          flexShrink: 0,
-          display: "block",
-        }}
+        style={{ width: "34px", height: "34px", borderRadius: "50%", objectFit: "cover", flexShrink: 0, display: "block" }}
       />
     );
   }
 
-  // Fallback: initial circle
   return (
     <div style={{
       width: "34px", height: "34px", borderRadius: "50%",
@@ -277,14 +265,60 @@ function AuthorAvatar({
 // ─── Main card ────────────────────────────────────────────────────────────────
 
 export default function ExperienceCard({
-  pullQuote, category, tag, authorInitial, authorName, authorUsername,
-  authorAvatar, authorNote, title, excerpt, mediaType = "none", mediaUrl,
-  imageUrls, videoUrl, mediaCount, isLive = false, liveStarted,
-  carriedCount = 0, responseCount = 0, readTime, isPlus = false,
+  id, profileId, pullQuote, category, tag, authorInitial, authorName,
+  authorUsername, authorAvatar, authorNote, title, excerpt,
+  mediaType = "none", mediaUrl, imageUrls, videoUrl, mediaCount,
+  isLive = false, liveStarted, carriedCount = 0, responseCount = 0,
+  readTime, isPlus = false,
 }: Props) {
   const photos = imageUrls && imageUrls.length > 0
     ? imageUrls
     : (mediaUrl && mediaType === "image" ? [mediaUrl] : []);
+
+  // Author area — separate link to profile, stops propagation so card link doesn't fire
+  const AuthorArea = () => {
+    const inner = (
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <AuthorAvatar avatar={authorAvatar} initial={authorInitial} isLive={isLive} />
+        <div>
+          <p style={{
+            fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600,
+            color: "var(--text-primary)", lineHeight: 1.2, margin: 0,
+          }}>
+            {authorName}
+          </p>
+          {authorUsername && !isLive && (
+            <p style={{
+              fontFamily: "'Inter', sans-serif", fontSize: "11px",
+              color: "var(--text-muted)", margin: "1px 0 0 0", lineHeight: 1,
+            }}>
+              @{authorUsername}
+            </p>
+          )}
+          {authorNote && (
+            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)", margin: "2px 0 0 0" }}>
+              {authorNote}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+
+    // If anonymous or no profileId, author area is not clickable
+    if (!profileId || authorName === "Anonymous") {
+      return <div>{inner}</div>;
+    }
+
+    return (
+      <Link
+        href={`/profile/${profileId}`}
+        onClick={(e) => e.stopPropagation()}
+        style={{ textDecoration: "none", color: "inherit" }}
+      >
+        {inner}
+      </Link>
+    );
+  };
 
   return (
     <div style={{
@@ -300,31 +334,7 @@ export default function ExperienceCard({
 
       {/* ── TOP: Author + category pill ─────────────────────────────────── */}
       <div style={{ padding: "16px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <AuthorAvatar avatar={authorAvatar} initial={authorInitial} isLive={isLive} />
-          <div>
-            <p style={{
-              fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600,
-              color: "var(--text-primary)", lineHeight: 1.2, margin: 0,
-            }}>
-              {authorName}
-            </p>
-            {authorUsername && !isLive && (
-              <p style={{
-                fontFamily: "'Inter', sans-serif", fontSize: "11px",
-                color: "var(--text-muted)", margin: "1px 0 0 0", lineHeight: 1,
-              }}>
-                @{authorUsername}
-              </p>
-            )}
-            {authorNote && (
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)", margin: "2px 0 0 0" }}>
-                {authorNote}
-              </p>
-            )}
-          </div>
-        </div>
-
+        <AuthorArea />
         <span style={{
           fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 600,
           letterSpacing: "1.5px", textTransform: "uppercase",
@@ -358,10 +368,7 @@ export default function ExperienceCard({
       {/* ── BODY ────────────────────────────────────────────────────────── */}
       <div style={{ padding: "16px 20px 0" }}>
         {excerpt && excerpt !== pullQuote && (
-          <p style={{
-            fontSize: "14px", color: "var(--text-soft)",
-            lineHeight: 1.7, fontWeight: 300, margin: 0,
-          }}>
+          <p style={{ fontSize: "14px", color: "var(--text-soft)", lineHeight: 1.7, fontWeight: 300, margin: 0 }}>
             {excerpt}
           </p>
         )}
