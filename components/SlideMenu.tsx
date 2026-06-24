@@ -173,7 +173,7 @@ export default function SlideMenu({
           </span>
         </button>
 
-        {/* Signed in — user info + actions */}
+        {/* Signed in */}
         {user ? (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 2px" }}>
@@ -199,7 +199,7 @@ export default function SlideMenu({
             </button>
           </>
         ) : (
-          /* Signed out — get started is the only CTA */
+          /* Signed out */
           <>
             <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "rgba(246,241,234,0.35)", lineHeight: 1.6, margin: "4px 0 8px", textAlign: "center" as const }}>
               Share your experience or read what others have lived through.
@@ -207,7 +207,7 @@ export default function SlideMenu({
             <button
               onClick={onSignIn}
               style={{ width: "100%", background: "var(--permanent-gold)", border: "none", borderRadius: "8px", padding: "12px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white" }}>
-              Get started
+              Join Annie
             </button>
             <button
               onClick={onSignIn}
