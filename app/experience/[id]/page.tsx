@@ -1,6 +1,6 @@
 "use client";
 // app/experience/[id]/page.tsx
-// Reading page: author → title → media → body → pull quote → footer.
+// Reading page: author → title → media → body → pull quote → footer → responses.
 // Giants Way: author clickable to profile, three dot menu for owner actions.
 // All 11 statements. Zero hardcoded colors.
 
@@ -10,6 +10,7 @@ import Link from "next/link";
 import {
   getExperienceById, carryForward, updateExperience, deleteExperience,
   uploadExperienceImage, parseVideoUrl, FeedExperience, FREE_PHOTO_LIMIT,
+  getResponsesForExperience, postResponse, deleteResponse, Response,
 } from "../../../lib/experiences";
 import { getCurrentUser, AnnieUser } from "../../../lib/auth";
 
@@ -138,31 +139,6 @@ function ReadingVideo({ url }: { url: string }) {
   );
 }
 
-// RESPOND BUTTON
-
-function RespondButton() {
-  const [show, setShow] = useState(false);
-  return (
-    <div style={{ position: "relative", display: "inline-flex" }}>
-      <button
-        onClick={() => setShow((s) => !s)}
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        style={{ background: "transparent", border: "1px solid var(--border-default)", borderRadius: "var(--radius-sm)", padding: "10px 16px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-        Respond
-      </button>
-      {show && (
-        <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: "0", background: "var(--surface-card)", border: "1px solid var(--border-default)", borderRadius: "6px", padding: "6px 10px", fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)", whiteSpace: "nowrap" as const, zIndex: 10 }}>
-          Coming soon
-        </div>
-      )}
-    </div>
-  );
-}
-
 // THREE DOT MENU for owner actions
 
 function OwnerMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
@@ -206,6 +182,208 @@ function OwnerMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => v
   );
 }
 
+// RESPONSE ITEM
+
+function ResponseItem({
+  response,
+  currentUserId,
+  onDelete,
+}: {
+  response: Response;
+  currentUserId: string | null;
+  onDelete: (id: string) => void;
+}) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const isOwner = currentUserId === response.profile_id;
+  const name = response.author_name || "Someone";
+  const initial = name.charAt(0).toUpperCase();
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    await deleteResponse(response.id);
+    onDelete(response.id);
+  };
+
+  return (
+    <div style={{ display: "flex", gap: "10px", padding: "16px 0", borderBottom: "1px solid var(--border-default)" }}>
+      <div style={{
+        width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+        background: response.author_avatar_url ? "transparent" : "var(--gold-soft)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontFamily: "'Cormorant Garamond', serif", fontSize: "14px", fontWeight: 600, color: "var(--permanent-gold)",
+        overflow: "hidden",
+      }}>
+        {response.author_avatar_url
+          ? <img src={response.author_avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          : initial}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "var(--text-primary)" }}>
+              {name}
+            </span>
+            {response.author_username && (
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)" }}>
+                @{response.author_username}
+              </span>
+            )}
+          </div>
+          {isOwner && !confirmDelete && (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              style={{ background: "transparent", border: "none", cursor: "pointer", padding: "2px 6px", fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)" }}>
+              Remove
+            </button>
+          )}
+          {isOwner && confirmDelete && (
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <button onClick={() => setConfirmDelete(false)} style={{ background: "transparent", border: "none", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)" }}>
+                Cancel
+              </button>
+              <button onClick={handleDelete} disabled={deleting} style={{ background: "transparent", border: "none", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--permanent-live)", fontWeight: 600 }}>
+                {deleting ? "Removing…" : "Yes, remove"}
+              </button>
+            </div>
+          )}
+        </div>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", color: "var(--text-soft)", lineHeight: 1.7, margin: 0 }}>
+          {response.content}
+        </p>
+        {response.is_edited && (
+          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "var(--text-muted)", margin: "4px 0 0" }}>edited</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// RESPONSE SECTION
+
+function ResponseSection({
+  experienceId,
+  user,
+  initialCount,
+  onCountChange,
+}: {
+  experienceId: string;
+  user: AnnieUser | null;
+  initialCount: number;
+  onCountChange: (n: number) => void;
+}) {
+  const [responses, setResponses]       = useState<Response[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [text, setText]                 = useState("");
+  const [submitting, setSubmitting]     = useState(false);
+  const [submitError, setSubmitError]   = useState("");
+  const [open, setOpen]                 = useState(false);
+  const textareaRef                     = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    getResponsesForExperience(experienceId).then((data) => {
+      setResponses(data);
+      setLoading(false);
+    });
+  }, [experienceId]);
+
+  const handleSubmit = async () => {
+    if (!user || !text.trim()) return;
+    setSubmitting(true);
+    setSubmitError("");
+    const result = await postResponse(experienceId, user.id, text.trim());
+    if (!result.ok) {
+      setSubmitError("Something went wrong. Try again.");
+      setSubmitting(false);
+      return;
+    }
+    // Re-fetch to get the full response with author info
+    const updated = await getResponsesForExperience(experienceId);
+    setResponses(updated);
+    onCountChange(updated.length);
+    setText("");
+    setOpen(false);
+    setSubmitting(false);
+  };
+
+  const handleDelete = (id: string) => {
+    const updated = responses.filter((r) => r.id !== id);
+    setResponses(updated);
+    onCountChange(updated.length);
+  };
+
+  return (
+    <div style={{ padding: "0 24px", marginTop: "32px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+        <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "20px", fontWeight: 300, color: "var(--text-primary)", margin: 0 }}>
+          {responses.length === 0 ? "No responses yet" : `${responses.length} ${responses.length === 1 ? "response" : "responses"}`}
+        </h3>
+        {user && !open && (
+          <button
+            onClick={() => { setOpen(true); setTimeout(() => textareaRef.current?.focus(), 50); }}
+            style={{ background: "transparent", border: "1px solid var(--border-default)", borderRadius: "var(--radius-sm)", padding: "8px 14px", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Respond
+          </button>
+        )}
+        {!user && (
+          <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>
+            <Link href="/" style={{ color: "var(--permanent-gold)", textDecoration: "none", fontWeight: 600 }}>Sign in</Link> to respond
+          </span>
+        )}
+      </div>
+
+      {/* Response input */}
+      {user && open && (
+        <div style={{ marginBottom: "24px", background: "var(--surface-card)", border: "1px solid var(--border-default)", borderRadius: "10px", padding: "16px" }}>
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Share your response…"
+            rows={3}
+            style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "none", fontFamily: "'Inter', sans-serif", fontSize: "14px", color: "var(--text-primary)", lineHeight: 1.7, boxSizing: "border-box" as const }}
+          />
+          {submitError && (
+            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--permanent-live)", margin: "8px 0 0" }}>{submitError}</p>
+          )}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px", borderTop: "1px solid var(--border-default)", paddingTop: "12px" }}>
+            <button
+              onClick={() => { setOpen(false); setText(""); setSubmitError(""); }}
+              style={{ background: "transparent", border: "none", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)", padding: "7px 12px" }}>
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || !text.trim()}
+              style={{ background: "var(--permanent-gold)", border: "none", borderRadius: "6px", padding: "7px 16px", cursor: submitting || !text.trim() ? "not-allowed" : "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, color: "white", opacity: submitting || !text.trim() ? 0.5 : 1 }}>
+              {submitting ? "Posting…" : "Post response"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Response list */}
+      {loading ? (
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>Loading…</p>
+      ) : (
+        <div>
+          {responses.map((r) => (
+            <ResponseItem
+              key={r.id}
+              response={r}
+              currentUserId={user?.id ?? null}
+              onDelete={handleDelete}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // MAIN PAGE
 
 export default function ExperiencePage() {
@@ -219,6 +397,7 @@ export default function ExperiencePage() {
   const [notFound, setNotFound]             = useState(false);
   const [carrying, setCarrying]             = useState(false);
   const [carriedLocally, setCarriedLocally] = useState(false);
+  const [responseCount, setResponseCount]   = useState(0);
 
   const [editOpen, setEditOpen]                   = useState(false);
   const [editTitle, setEditTitle]                 = useState("");
@@ -249,7 +428,10 @@ export default function ExperiencePage() {
     if (!id) return;
     Promise.all([getExperienceById(id), getCurrentUser()]).then(([data, u]) => {
       if (!data) { setNotFound(true); setLoading(false); return; }
-      setExp(data); setUser(u); setLoading(false);
+      setExp(data);
+      setUser(u);
+      setResponseCount(data.response_count);
+      setLoading(false);
     });
   }, [id]);
 
@@ -357,7 +539,7 @@ export default function ExperiencePage() {
   };
 
   const handleCarryForward = async () => {
-    if (!exp || carrying || carriedLocally) return;
+    if (!exp || carrying || carriedLocally || !user) return;
     setCarrying(true);
     const ok = await carryForward(exp.id);
     if (ok) { setExp({ ...exp, carried_forward_count: exp.carried_forward_count + 1 }); setCarriedLocally(true); }
@@ -392,6 +574,9 @@ export default function ExperiencePage() {
   const initial    = exp.is_anonymous ? "A" : (name.charAt(0).toUpperCase() || "?");
   const avatar     = exp.is_anonymous ? null : (exp.author_avatar_url || null);
   const paragraphs = exp.content.split(/\n+/).filter((p) => p.trim().length > 0);
+
+  // Carry forward button — only active when signed in
+  const carryDisabled = carrying || carriedLocally || !user;
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--surface-bg)" }}>
@@ -487,22 +672,38 @@ export default function ExperiencePage() {
 
         {/* Footer */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "24px 24px 0", marginTop: "28px", borderTop: "1px solid var(--border-default)", flexWrap: "wrap" as const, gap: "12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>
-              {exp.response_count} {exp.response_count === 1 ? "response" : "responses"}
-            </span>
-            <RespondButton />
-          </div>
+          <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "var(--text-muted)" }}>
+            {responseCount} {responseCount === 1 ? "response" : "responses"}
+          </span>
           <button
             onClick={handleCarryForward}
-            disabled={carrying || carriedLocally}
-            style={{ display: "flex", alignItems: "center", gap: "6px", background: carriedLocally ? "transparent" : "var(--permanent-gold)", color: carriedLocally ? "var(--permanent-gold)" : "white", border: carriedLocally ? "1px solid var(--permanent-gold)" : "none", borderRadius: "var(--radius-sm)", padding: "10px 18px", cursor: carriedLocally ? "default" : "pointer", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, transition: "all 0.2s" }}>
+            disabled={carryDisabled}
+            title={!user ? "Sign in to carry this forward" : undefined}
+            style={{
+              display: "flex", alignItems: "center", gap: "6px",
+              background: carriedLocally ? "transparent" : "var(--permanent-gold)",
+              color: carriedLocally ? "var(--permanent-gold)" : "white",
+              border: carriedLocally ? "1px solid var(--permanent-gold)" : "none",
+              borderRadius: "var(--radius-sm)", padding: "10px 18px",
+              cursor: carryDisabled ? "default" : "pointer",
+              fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600,
+              opacity: !user && !carriedLocally ? 0.5 : 1,
+              transition: "all 0.2s",
+            }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill={carriedLocally ? "var(--permanent-gold)" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
             </svg>
             {exp.carried_forward_count} carried this forward
           </button>
         </div>
+
+        {/* Responses */}
+        <ResponseSection
+          experienceId={exp.id}
+          user={user}
+          initialCount={responseCount}
+          onCountChange={setResponseCount}
+        />
       </div>
 
       {/* EDIT OVERLAY */}

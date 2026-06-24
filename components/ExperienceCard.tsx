@@ -12,8 +12,8 @@ import { parseVideoUrl } from "../lib/experiences";
 type MediaType = "image" | "video" | "none";
 
 type Props = {
-  id?:             string; // experience id — for the card link
-  profileId?:      string; // author profile id — for the author link
+  id?:             string;
+  profileId?:      string;
   pullQuote:       string;
   category:        string;
   tag?:            string;
@@ -35,6 +35,7 @@ type Props = {
   responseCount?:  string | number;
   readTime?:       string | number;
   isPlus?:         boolean;
+  isSignedIn?:     boolean; // pass true when user is authenticated
 };
 
 // ─── Photo carousel ───────────────────────────────────────────────────────────
@@ -208,31 +209,6 @@ function LiveBar({ started }: { started?: string }) {
   );
 }
 
-// ─── Respond button ───────────────────────────────────────────────────────────
-
-function RespondButton() {
-  const [show, setShow] = useState(false);
-  return (
-    <div style={{ position: "relative", display: "inline-flex" }}>
-      <span
-        onClick={(e) => { e.stopPropagation(); e.preventDefault(); setShow((s) => !s); }}
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        style={{ display: "flex", alignItems: "center", gap: "5px", fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--text-muted)", cursor: "pointer" }}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-        Respond
-      </span>
-      {show && (
-        <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: "0", background: "var(--permanent-ink, #0f0e0c)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", padding: "6px 10px", fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "rgba(246,241,234,0.7)", whiteSpace: "nowrap", zIndex: 10 }}>
-          Coming soon
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Author avatar ────────────────────────────────────────────────────────────
 
 function AuthorAvatar({ avatar, initial, isLive }: { avatar?: string | null; initial: string; isLive: boolean }) {
@@ -269,13 +245,12 @@ export default function ExperienceCard({
   authorUsername, authorAvatar, authorNote, title, excerpt,
   mediaType = "none", mediaUrl, imageUrls, videoUrl, mediaCount,
   isLive = false, liveStarted, carriedCount = 0, responseCount = 0,
-  readTime, isPlus = false,
+  readTime, isPlus = false, isSignedIn = false,
 }: Props) {
   const photos = imageUrls && imageUrls.length > 0
     ? imageUrls
     : (mediaUrl && mediaType === "image" ? [mediaUrl] : []);
 
-  // Author area — separate link to profile, stops propagation so card link doesn't fire
   const AuthorArea = () => {
     const inner = (
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -304,7 +279,6 @@ export default function ExperienceCard({
       </div>
     );
 
-    // If anonymous or no profileId, author area is not clickable
     if (!profileId || authorName === "Anonymous") {
       return <div>{inner}</div>;
     }
@@ -394,13 +368,34 @@ export default function ExperienceCard({
         flexWrap: "wrap" as const, gap: "8px",
       }}>
         <div style={{ display: "flex", gap: "14px", flexWrap: "wrap" as const, alignItems: "center" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: "5px", fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--text-muted)", cursor: "pointer" }}>
+          {/* Carry count — display only on card, action lives on detail page */}
+          <span style={{ display: "flex", alignItems: "center", gap: "5px", fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--text-muted)" }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
             </svg>
             {carriedCount} carried this forward
           </span>
-          <RespondButton />
+
+          {/* Respond — links to detail page where the thread lives */}
+          {id ? (
+            <Link
+              href={`/experience/${id}`}
+              onClick={(e) => e.stopPropagation()}
+              style={{ display: "flex", alignItems: "center", gap: "5px", fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--text-muted)", textDecoration: "none" }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              {Number(responseCount) > 0 ? `${responseCount} ${Number(responseCount) === 1 ? "response" : "responses"}` : "Respond"}
+            </Link>
+          ) : (
+            <span style={{ display: "flex", alignItems: "center", gap: "5px", fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--text-muted)" }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              Respond
+            </span>
+          )}
+
           {readTime && (
             <span style={{ display: "flex", alignItems: "center", gap: "5px", fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "var(--text-muted)" }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
