@@ -136,12 +136,6 @@ export async function getExperiencesByProfile(
   profileId: string,
   includeAnonymous = false
 ): Promise<FeedExperience[]> {
-  // Anonymous posts always resolve profile_id to null in the view, so they
-  // can never be matched back to a profileId here — includeAnonymous is kept
-  // for call-site compatibility but has no effect against this view. If you
-  // need an author to see their own anonymous posts on their own profile page,
-  // that read must go directly against `experiences` with an auth.uid() check,
-  // not through this public-facing function.
   const { data, error } = await supabase
     .from("public_experiences")
     .select("*")
@@ -178,6 +172,56 @@ export async function carryForward(id: string): Promise<boolean> {
   const { error } = await supabase.rpc("increment_carried_forward", { experience_id: id });
   return !error;
 }
+
+// ─── Responses ────────────────────────────────────────────────────────────────
+
+export type Response = {
+  id:               string;
+  experience_id:    string;
+  profile_id:       string;
+  content:          string;
+  created_at:       string;
+  is_edited:        boolean;
+  edited_at:        string | null;
+  author_name:      string | null;
+  author_username:  string | null;
+  author_avatar_url: string | null;
+};
+
+export async function getResponsesForExperience(experienceId: string): Promise<Response[]> {
+  const { data, error } = await supabase
+    .from("public_responses")
+    .select("*")
+    .eq("experience_id", experienceId);
+
+  if (error) return [];
+  return (data || []) as Response[];
+}
+
+export async function postResponse(
+  experienceId: string,
+  profileId: string,
+  content: string
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase
+    .from("responses")
+    .insert({ experience_id: experienceId, profile_id: profileId, content: content.trim() });
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function deleteResponse(responseId: string): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase
+    .from("responses")
+    .delete()
+    .eq("id", responseId);
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+// ─── Experience editing ───────────────────────────────────────────────────────
 
 export type EditableFields = {
   title:      string;
