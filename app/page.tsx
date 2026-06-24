@@ -234,7 +234,7 @@ export default function Home() {
               style={{ textDecoration: "none", color: "inherit", display: "block", marginBottom: "24px" }}>
               <ExperienceCard
                 id={exp.id}
-                profileId={exp.is_anonymous ? undefined : exp.profile_id}
+                profileId={exp.is_anonymous ? undefined : (exp.profile_id ?? undefined)}
                 pullQuote={exp.pull_quote || excerpt}
                 category={exp.category.charAt(0).toUpperCase() + exp.category.slice(1)}
                 authorInitial={initial}
