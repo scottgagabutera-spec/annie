@@ -22,7 +22,7 @@ function sessionToUser(session: any, profile?: any): AnnieUser | null {
   if (!u) return null;
   return {
     id: u.id,
-    name: u.user_metadata?.full_name || u.email?.split("@")[0] || "You",
+    name: profile?.full_name || u.user_metadata?.full_name || u.email?.split("@")[0] || "You",
     email: u.email || "",
     avatar: profile?.avatar_url || u.user_metadata?.avatar_url || "",
     provider: u.app_metadata?.provider || "unknown",
@@ -40,7 +40,7 @@ export async function getCurrentUser(): Promise<AnnieUser | null> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("username, username_changed_at, has_seen_welcome, has_completed_profile, newsletter_opted_in, avatar_url")
+    .select("full_name, username, username_changed_at, has_seen_welcome, has_completed_profile, newsletter_opted_in, avatar_url")
     .eq("id", session.user.id)
     .single();
 
@@ -53,7 +53,7 @@ export function onAuthChange(callback: (user: AnnieUser | null) => void) {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("username, username_changed_at, has_seen_welcome, has_completed_profile, newsletter_opted_in, avatar_url")
+      .select("full_name, username, username_changed_at, has_seen_welcome, has_completed_profile, newsletter_opted_in, avatar_url")
       .eq("id", session.user.id)
       .single();
 
@@ -157,14 +157,17 @@ export async function completeProfile(
   const available = await checkUsernameAvailable(username);
   if (!available) return { ok: false, error: "That username is taken" };
 
+  // Save to auth metadata
   const { error: authError } = await supabase.auth.updateUser({
     data: { full_name: displayName.trim() },
   });
   if (authError) return { ok: false, error: authError.message };
 
+  // Save to profiles table — full_name is the source of truth for the feed join
   const { error: profileError } = await supabase
     .from("profiles")
     .update({
+      full_name: displayName.trim(),
       username: username.toLowerCase(),
       has_completed_profile: true,
       has_seen_welcome: true,
@@ -177,10 +180,22 @@ export async function completeProfile(
 }
 
 export async function updateDisplayName(name: string): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await supabase.auth.updateUser({
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return { ok: false, error: "Not signed in." };
+
+  // Save to auth metadata
+  const { error: authError } = await supabase.auth.updateUser({
     data: { full_name: name.trim() },
   });
-  if (error) return { ok: false, error: error.message };
+  if (authError) return { ok: false, error: authError.message };
+
+  // Save to profiles table — source of truth for feed and experience pages
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update({ full_name: name.trim() })
+    .eq("id", session.user.id);
+
+  if (profileError) return { ok: false, error: profileError.message };
   return { ok: true };
 }
 
